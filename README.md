@@ -284,7 +284,6 @@ are named as follows:
 We are now ready to train and evaluate the continuous latent variable model using 
 `dynamics.py`. 
 
-### Monitoring progress
 
 ## Precomputed simulation data
 

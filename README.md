@@ -1,17 +1,25 @@
-<img src="assets/Picture1.jpg" data-canonical-src="https://gyazo.com/eb5c5741b6a9a16c692170a41a49c858.png" height="150" />
+<img src="assets/npd.jpg" height="150" />
 
-Offical repository for [Neural Persistence Dynamics](https://arxiv.org/abs/2405.15732)
+This is the offical repository for [Neural Persistence Dynamics](https://arxiv.org/abs/2405.15732).
+
+If you use the code please cite as:
+
 ```bibtex
-S. Zeng, F.Graf, M. Uray, S. Huber and R. Kwitt
-Neural Persistence Dynamics
-arXiv preprint, 2024
+@misc{Zeng24a,
+      title={Neural Persistence Dynamics}, 
+      author={Sebastian Zeng and Florian Graf and Martin Uray and Stefan Huber and Roland Kwitt},
+      year={2024},
+      eprint={2405.15732},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
 ```
 ## Contents
 - [Setup](#setup)
 - [Replicating experiments (with precomputed simulations)](#replicating-experiments)
 - [Running your own simulations](#running-your-own-simulations)
 ## Setup
-In the following, we assume that the repository has been closed into `/tmp/neural_persistence_dynamics`.
+In the following, we assume that the repository has been cloned into `/tmp/neural_persistence_dynamics`.
 ### Setup a new Anaconda environment
 ```bash
 conda create -n "pytorch23" python=3.10
@@ -44,7 +52,7 @@ pip3 install git+https://github.com/simonzhang00/ripser-plusplus.git
 ```bash
 pip install tensorboard, halo, einops, h5py
 ```
-### Setup folder structure
+### Create folder structure
 ```bash
 cd /tmp/neural_persistence_dynamics
 mkdir -p data # stores all data
@@ -52,6 +60,10 @@ mkdir -p logs # stores all logs
 mkdir -p runs # stores all tensorboard related stuff
 ```
 ## Replicating experiments
+
+In the following, we replicate the experiments with the `dorsogna-1k` data from then paper. All other experiments
+follow the same procedure.
+
 ### Downloading precomputed simulation data
 ```bash
 cd /tmp/neural_persistence_dynamics
@@ -67,8 +79,8 @@ python download.py --dataset dorsogna-1k --destination data/Giusti23a/1k
     --compute-ph
 ```
 This will compute all Vietoris-Rips persistence diagrams for $H_0$ and $H_1$ 
-(by default; in case you also want $H_2$ add `--max-dim 2` on the command line)
-and save them to `data/Giusti23a/1k/dgms_1k_vr_h0h1.pt`.
+(by default; in case you also want $H_2$ add `--max-dim 2` on the command line).
+Diagrams are saved to `data/Giusti23a/1k/dgms_1k_vr_h0h1.pt`.
 ### Computing vectorizations
 Next, we can compute the vectorizations:
 ```python
@@ -80,8 +92,10 @@ python compute_vec.py \
     --subsample 50000
 ```
 The `dorsogna-1k` dataset contains 1,000 simulations with 100 time points. Hence, we 
-have a total of 100,000 available persistence diagrams per dimension. In this example,
-we subsample 50,000 to parametrize the vectorization, meaning 50,000 diagrams are 
+have a total of 100,000 available persistence diagrams (for $H_0$ and $H_1$). 
+
+In this example,
+we randomly subsample 50,000 to parametrize the vectorization, meaning 50,000 diagrams are 
 used to compute the centers of 20 exponential structure elements. Overall, this 
 yields 20-dimensional vectorizations per diagram and dimension. The relevant output
 file is named `vecs_20_0.005.pt` and, for the given setting, contains 40-dimensional

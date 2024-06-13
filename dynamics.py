@@ -4,7 +4,12 @@ szeng, fgraf, rkwitt, muray, shuber, 2024
 """
 
 import os
+import sys
+
 import argparse
+from rich.markdown import Markdown
+from rich_argparse import RichHelpFormatter
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -50,134 +55,168 @@ from sklearn.metrics import r2_score, mean_squared_error
 # region cmdline parsing
 def setup_cmdline_parsing():
     """Setup command line parsing."""
-    generic_parser = argparse.ArgumentParser()
+    
+    description = """**Neural Persistence Dynamics**"""    
+    generic_parser = argparse.ArgumentParser(description=Markdown(description, style="argparse.text"), formatter_class=RichHelpFormatter)
     group0 = generic_parser.add_argument_group('Data loading/saving arguments')
     group0.add_argument(
         "--log-out-file", 
+		metavar="FILE",
         type=str, 
         default=None,
         help="Filename for output log file"
     )
     group0.add_argument(
         "--vec-inp-file", 
+        metavar="FILE",
         type=str, 
         default=None,
         help="Filename for input PH vectorizations "
     )
     group0.add_argument(
         "--aux-inp-file", 
+        metavar="FILE",
         type=str, 
         default=None,
         help="Filename for input regression targets (i.e., simulation parameters)"
     )
     group0.add_argument(
         "--pts-inp-file", 
+        metavar="FILE",
         type=str, 
         default=None,
         help="Filename for input point cloud data"
     )
     group0.add_argument(
         "--net-out-file", 
+		metavar="FILE",
         type=str, 
         default=None,
         help="Filename for output model file"
     )
     group0.add_argument(
         "--run-dir", 
+		metavar="FOLDER",
         type=str, 
-        default='runs/',
+        default=None,
         help="Directory for tensorboard logs"
     )
     group0.add_argument(
         "--seed",
+        metavar="INT",
         type=int, 
         default=42,
-        help="Seed the model")
+        help="Seed the model (default: %(default)s)"
+    )
     group0.add_argument(
         "--experiment-id", 
+        metavar="STR",
         type=str, 
         default="42",
-        help="Experiment identifier"
+        help="Experiment identifier (can be string)"
     )
 
     group1 = generic_parser.add_argument_group('Training arguments')
     group1.add_argument(
         "--batch-size", 
+        metavar="INT",
         type=int, 
         default=64,
-        help="Batch size")
+        help="Batch size (default: %(default)s)"
+    )
     group1.add_argument(
         "--lr", 
+        metavar="FLOAT",
         type=float, 
         default=1e-3,
-        help="Learning rate")
+        help="Learning rate (default: %(default)s)"
+    )
     group1.add_argument(
         "--n-epochs", 
+        metavar="INT",
         type=int, 
         default=210,
-        help="Number of training epochs")
+        help="Number of training epochs (default: %(default)s)"
+	)
     group1.add_argument(
         "--restart", 
+        metavar="INT",
         type=int, 
         default=30,
-        help="Half the cycle length of cyclic cosine LR annealing")
+        help="1/2 cycle length of cyclic cosine LR annealing (default: %(default)s)"
+	)
     group1.add_argument(
         "--device", 
         type=str, 
         default="cuda:0",
-        help="Device to run the model on")
+        help="Device to run the model on (default: %(default)s)"
+	)
     group1.add_argument(
         "--kl-weight", 
+        metavar="FLOAT",
         type=float, 
         default=1e-3,
-        help="KL divergence weight")
+        help="KL-div. weight (default: %(default)s)"
+	)
     group1.add_argument(
         "--aux-weight", 
+        metavar="FLOAT",
         type=float, 
         default=1000.0,
-        help="Weighting of the regression loss term")
+        help="Weighting of the regression loss term (default: %(default)s)"
+	)
     group1.add_argument(
         "--weight-decay", 
+        metavar="FLOAT",
         type=float, 
         default=1e-3,
-        help="Weight decay")
+        help="Weight decay (default: %(default)s)"
+	)
 
     group2 = generic_parser.add_argument_group('Model configuration arguments')
     group2.add_argument(
         "--z-dim", 
+		metavar="INT",
         type=int, 
         default=16, 
-        help="Latent ODE dim."
+        help="Dimensionality of latent space Z (default: %(default)s)"
     )
     group2.add_argument(
         "--ode-h-dim", 
+        metavar="INT",
         type=int, 
         default=30, 
-        help="Hidden dim. of ODE func."
+        help="Hidden dimensionality of ODE func (default: %(default)s)"
     )
     group2.add_argument(
-        "--mtan-h-dim", 
+        "--mtan-h-dim",
+        metavar="INT", 
         type=int, 
         default=128, 
-        help="Hidden dim. of mTAN module."
+        help="Hidden dimensionality of mTAN module (default: %(default)s)"
     )
-    group2.add_argument(
-        "--sig-depth", 
-        type=int, 
-        default=3, 
-        help="Path signature depth."
-    )
-    group2.add_argument(
-        "--pointnet-dim", 
-        type=int, 
-        default=32, 
-        help="PointNet++ hidden dim."
-    )
+    if "z_signature" in sys.argv:
+        group2.add_argument(
+			"--sig-depth",
+   			metavar="INT", 
+			type=int, 
+			default=3, 
+			help="Path signature depth (default: %(default)s)"
+		)
+    if any([x in ['ptsdyn_only', 'joint'] for x in sys.argv]):
+        group2.add_argument(
+			"--pointnet-dim", 
+			metavar="INT",
+			type=int, 
+			default=32, 
+			help="PointNet++ hidden dimensionality (default: %(default)s)"
+		)
     group2.add_argument(
         "--reconnet-h-dim",
+        metavar="INT",
         type=int,
         default=32,
-        help="Hidden dim. of reconstruction net.",
+        help="Hidden dimensionality of reconstruction net (default: %(default)s)"
     )
     group2.add_argument(
         "--backbone",
@@ -186,7 +225,7 @@ def setup_cmdline_parsing():
             "ptsdyn_only",
             "joint"],
         default="topdyn_only",
-        help="Model variants",
+        help="Model variants  (default: %(default)s)"
     )
     group2.add_argument(
         "--processor", 
@@ -196,7 +235,8 @@ def setup_cmdline_parsing():
 			'z_mtantwins',
 			'z_meanstate'], 
         default="z_signature", 
-        help="Summary of latent trajectory.")
+        help="Method to summarize the latent trajectory (default: %(default)s)"
+	)
 
     group3 = generic_parser.add_argument_group("Data preprocessing arguments")
     group3.add_argument(
@@ -358,6 +398,9 @@ def create_processor(args):
 
 
 def main():
+	term_rows, term_cols = os.popen('stty size', 'r').read().split() 
+	os.environ["COLUMNS"] = str(400)
+
 	trn_tracker = defaultdict(list) # track trn stats
 	tst_tracker = defaultdict(list) # track tst stats
 	
@@ -368,8 +411,10 @@ def main():
 	args = parser.parse_args()
 	print(args)
 	
-	# setup tensorboard
-	writer = SummaryWriter(os.path.join(args.run_dir, args.experiment_id))
+	# setup tensorboard if run_dir is given
+	writer = None
+	if args.run_dir is not None:
+		writer = SummaryWriter(os.path.join(args.run_dir, args.experiment_id))
 	
 	spinner.start('Loading data')
 	ds = load_data(args)
@@ -471,7 +516,8 @@ def main():
 					trackers[trackers_key]['epoch_aux_t'][-1][:,aux_d],
 					trackers[trackers_key]['epoch_aux_p'][-1][:,aux_d])
 				scores[key_str].append(tmp)
-				writer.add_scalar("{}_{}/{}".format(scorefn_key, aux_d, trackers_key), tmp, epoch_cnt)
+				if writer:
+					writer.add_scalar("{}_{}/{}".format(scorefn_key, aux_d, trackers_key), tmp, epoch_cnt)
 				
 		
 		print('{:04d} | trn_loss={:.4f} | trn_aux={:0.4f} | trn_kld={:0.4f} | trn_log_pxz={:0.4f} | avg_trn_mse={:0.4f} | avg_tst_mse={:0.4f} | avg_tst_r2s={:0.4f} | lr={:0.6f}'.format(
@@ -485,20 +531,22 @@ def main():
 			np.mean(scores['r2s_tst']),
 			scheduler.get_last_lr()[-1]))
 		
-		writer.add_scalar("r2s_avg/trn", np.mean(scores['r2s_trn']), epoch_cnt)
-		writer.add_scalar("r2s_avg/tst", np.mean(scores['r2s_tst']), epoch_cnt)
-		
+		if writer:
+			writer.add_scalar("r2s_avg/trn", np.mean(scores['r2s_trn']), epoch_cnt)
+			writer.add_scalar("r2s_avg/tst", np.mean(scores['r2s_tst']), epoch_cnt)
+			
 		for aux_d in range(args.num_aux_dim):
-			plt.plot(
-				tst_tracker['epoch_aux_t'][-1][:,aux_d], 
-				tst_tracker['epoch_aux_p'][-1][:,aux_d], '.')
-			writer.add_figure('r2s/tst_scatter_{}'.format(aux_d), plt.gcf(), epoch_cnt)
-			plt.close()
+			if writer:
+				plt.plot(
+					tst_tracker['epoch_aux_t'][-1][:,aux_d], 
+					tst_tracker['epoch_aux_p'][-1][:,aux_d], '.')
+				writer.add_figure('r2s/tst_scatter_{}'.format(aux_d), plt.gcf(), epoch_cnt)
+				plt.close()
 
-	writer.close()
+	if writer:
+		writer.close()
 	if args.log_out_file:
 		torch.save((trn_tracker, tst_tracker, args), args.log_out_file)
-
 	if args.net_out_file:
 		torch.save(modules.state_dict(), args.net_out_file)
 

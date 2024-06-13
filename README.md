@@ -47,7 +47,6 @@ python -c 'import torch' # check
 ### Installing `torchph`
 ```bash
 cd /tmp/neural_persistence_dynamics
-mkdir 3rdparty
 cd 3rdparty
 git clone https://github.com/c-hofer/torchph.git 
 conda develop torchph
@@ -62,6 +61,7 @@ python -c 'import torchdiffeq' # check
 
 ### Installing `ripser-plusplus`
 ```bash
+conda install cmake
 pip3 install git+https://github.com/simonzhang00/ripser-plusplus.git
 ```
 

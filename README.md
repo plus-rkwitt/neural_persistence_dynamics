@@ -29,6 +29,15 @@ conda create -n "pytorch23" python=3.10
 conda activate pytorch23
 ```
 
+### Create folder structure
+```bash
+cd /tmp/neural_persistence_dynamics
+mkdir -p data # stores all data
+mkdir -p logs # stores all logs
+mkdir -p 3rdparty # 3rdparty code
+mkdir -p runs # stores all tensorboard related stuff
+```
+
 ### Install ```pytorch```
 ```bash
 conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
@@ -56,17 +65,18 @@ python -c 'import torchdiffeq' # check
 pip3 install git+https://github.com/simonzhang00/ripser-plusplus.git
 ```
 
-### Installing other required packages
-```bash
-pip install tensorboard, halo, einops, h5py
-```
-
-### Create folder structure
+### Installing `signatory`
 ```bash
 cd /tmp/neural_persistence_dynamics
-mkdir -p data # stores all data
-mkdir -p logs # stores all logs
-mkdir -p runs # stores all tensorboard related stuff
+cd 3rdparty
+git clone https://github.com/patrick-kidger/signatory.git
+python setup.py install 
+python -c 'import signatory' # check
+```
+
+### Installing other required packages
+```bash
+pip install tensorboard, halo, einops, h5py, rich_argparse
 ```
 
 ## Replicating experiments

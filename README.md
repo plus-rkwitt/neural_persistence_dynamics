@@ -76,7 +76,7 @@ python -c 'import signatory' # check
 
 ### Installing other required packages
 ```bash
-pip install tensorboard, halo, einops, h5py, rich_argparse
+pip install tensorboard halo einops h5py rich_argparse gdown
 ```
 
 ## Replicating experiments

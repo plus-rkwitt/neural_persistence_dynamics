@@ -531,8 +531,8 @@ def main():
 			key_str = scorefn_key + "_" + trackers_key   
 			for aux_d in range(args.num_aux_dim):
 				tmp = scorefns[scorefn_key](
-					trackers[trackers_key]['epoch_aux_t'][-1][:,aux_d],
-					trackers[trackers_key]['epoch_aux_p'][-1][:,aux_d])
+					trackers[trackers_key]['epoch_aux_t'][-1][:,aux_d].numpy(),
+					trackers[trackers_key]['epoch_aux_p'][-1][:,aux_d].numpy())
 				scores[key_str].append(tmp)
 				if writer:
 					writer.add_scalar("{}_{}/{}".format(scorefn_key, aux_d, trackers_key), tmp, epoch_cnt)

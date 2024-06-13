@@ -1,9 +1,9 @@
-"""Main code for learning a continuous latent variable model (latent ODE) 
-on top of vectorized persistence diagrams.
+"""Neural Persistence Dynamics.
+
+szeng, fgraf, rkwitt, muray, shuber, 2024
 """
 
 import os
-import sys
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
@@ -46,52 +46,178 @@ from core import (
 	normal_kl)
 
 from sklearn.metrics import r2_score, mean_squared_error
-		
-		
+
+# region cmdline parsing
 def setup_cmdline_parsing():
-	generic_parser = argparse.ArgumentParser()
-	group0 = generic_parser.add_argument_group('Data loading/saving arguments')
-	group0.add_argument("--log-out-file", type=str, default=None)
-	group0.add_argument("--vec-inp-file", type=str, default=None)
-	group0.add_argument("--aux-inp-file", type=str, default=None)
-	group0.add_argument("--pts-inp-file", type=str, default=None)
-	group0.add_argument("--net-out-file", type=str, default=None)
-	group0.add_argument("--run-dir", type=str, default='runs/')
-	group0.add_argument("--seed",type=int, default=42)
-	group0.add_argument("--experiment-id",type=str, default="42")
+    """Setup command line parsing."""
+    generic_parser = argparse.ArgumentParser()
+    group0 = generic_parser.add_argument_group('Data loading/saving arguments')
+    group0.add_argument(
+        "--log-out-file", 
+        type=str, 
+        default=None,
+        help="Filename for output log file"
+    )
+    group0.add_argument(
+        "--vec-inp-file", 
+        type=str, 
+        default=None,
+        help="Filename for input PH vectorizations "
+    )
+    group0.add_argument(
+        "--aux-inp-file", 
+        type=str, 
+        default=None,
+        help="Filename for input regression targets (i.e., simulation parameters)"
+    )
+    group0.add_argument(
+        "--pts-inp-file", 
+        type=str, 
+        default=None,
+        help="Filename for input point cloud data"
+    )
+    group0.add_argument(
+        "--net-out-file", 
+        type=str, 
+        default=None,
+        help="Filename for output model file"
+    )
+    group0.add_argument(
+        "--run-dir", 
+        type=str, 
+        default='runs/',
+        help="Directory for tensorboard logs"
+    )
+    group0.add_argument(
+        "--seed",
+        type=int, 
+        default=42,
+        help="Seed the model")
+    group0.add_argument(
+        "--experiment-id", 
+        type=str, 
+        default="42",
+        help="Experiment identifier"
+    )
 
-	group1 = generic_parser.add_argument_group('Training arguments')
-	group1.add_argument("--batch-size", type=int, default=64)
-	group1.add_argument("--lr", type=float, default=1e-3)
-	group1.add_argument("--n-epochs", type=int, default=990)
-	group1.add_argument("--restart", type=int, default=30)
-	group1.add_argument("--device", type=str, default="cuda:0")
-	group1.add_argument("--kl-weight", type=float, default=0.01)
-	group1.add_argument("--aux-weight", type=float, default=10.)
-	group1.add_argument("--weight-decay", type=float, default=0.0001)
+    group1 = generic_parser.add_argument_group('Training arguments')
+    group1.add_argument(
+        "--batch-size", 
+        type=int, 
+        default=64,
+        help="Batch size")
+    group1.add_argument(
+        "--lr", 
+        type=float, 
+        default=1e-3,
+        help="Learning rate")
+    group1.add_argument(
+        "--n-epochs", 
+        type=int, 
+        default=210,
+        help="Number of training epochs")
+    group1.add_argument(
+        "--restart", 
+        type=int, 
+        default=30,
+        help="Half the cycle length of cyclic cosine LR annealing")
+    group1.add_argument(
+        "--device", 
+        type=str, 
+        default="cuda:0",
+        help="Device to run the model on")
+    group1.add_argument(
+        "--kl-weight", 
+        type=float, 
+        default=1e-3,
+        help="KL divergence weight")
+    group1.add_argument(
+        "--aux-weight", 
+        type=float, 
+        default=1000.0,
+        help="Weighting of the regression loss term")
+    group1.add_argument(
+        "--weight-decay", 
+        type=float, 
+        default=1e-3,
+        help="Weight decay")
 
-	group2 = generic_parser.add_argument_group('Model configuration arguments')
-	group2.add_argument("--z-dim", type=int, default=16, help="Latent ODE dim.")
-	group2.add_argument("--ode-h-dim", type=int, default=30, help="Hidden dim. of ODE func.")
-	group2.add_argument("--mtan-h-dim", type=int, default=128, help="Hidden dim. of mTAN module.")
-	group2.add_argument("--sig-depth", type=int, default=3, help="Path signature depth.")
-	group2.add_argument("--pointnet-dim", type=int, default=32, help="PointNet++ hidden dim. ")
-	group2.add_argument("--reconnet-h-dim", type=int, default=32, help="Hidden dim. of reconstruction net.")
-	group2.add_argument("--backbone", choices=[
-		'topdyn_only', 
-		'ptsdyn_only', 
-		'joint'], default="topdyn_only")
-	group2.add_argument("--processor", choices=[
-		'z_signature', 
-		'z_laststate',
-		'z_mtantwins',
-		'z_meanstate'], default="z_signature")
-	group3 = generic_parser.add_argument_group('Data preprocessing arguments')
-	group3.add_argument("--tps-frac", type=float, default=0.5)
-	return generic_parser
-	
-	
-def run_epoch(args, dl, t, modules, optimizer, aux_loss_fn=None, tracker=None, mode='train'):
+    group2 = generic_parser.add_argument_group('Model configuration arguments')
+    group2.add_argument(
+        "--z-dim", 
+        type=int, 
+        default=16, 
+        help="Latent ODE dim."
+    )
+    group2.add_argument(
+        "--ode-h-dim", 
+        type=int, 
+        default=30, 
+        help="Hidden dim. of ODE func."
+    )
+    group2.add_argument(
+        "--mtan-h-dim", 
+        type=int, 
+        default=128, 
+        help="Hidden dim. of mTAN module."
+    )
+    group2.add_argument(
+        "--sig-depth", 
+        type=int, 
+        default=3, 
+        help="Path signature depth."
+    )
+    group2.add_argument(
+        "--pointnet-dim", 
+        type=int, 
+        default=32, 
+        help="PointNet++ hidden dim."
+    )
+    group2.add_argument(
+        "--reconnet-h-dim",
+        type=int,
+        default=32,
+        help="Hidden dim. of reconstruction net.",
+    )
+    group2.add_argument(
+        "--backbone",
+        choices=[
+            "topdyn_only", 
+            "ptsdyn_only",
+            "joint"],
+        default="topdyn_only",
+        help="Model variants",
+    )
+    group2.add_argument(
+        "--processor", 
+        choices=[
+			'z_signature', 
+			'z_laststate',
+			'z_mtantwins',
+			'z_meanstate'], 
+        default="z_signature", 
+        help="Summary of latent trajectory.")
+
+    group3 = generic_parser.add_argument_group("Data preprocessing arguments")
+    group3.add_argument(
+        "--tps-frac", 
+        type=float, 
+        default=0.5, 
+        help="Fraction of timepoints to use."
+    )
+    return generic_parser
+# endregion
+
+
+def run_epoch(
+    args, 
+    dl, 
+    t: torch.Tensor, 
+    modules, 
+    optimizer, 
+    aux_loss_fn=None, 
+    tracker=None, 
+    mode:str='train'):
 	epoch_aux_loss = epoch_kld = epoch_loss = epoch_log_pxz = 0. 
 	
 	if mode=='train':
@@ -106,12 +232,12 @@ def run_epoch(args, dl, t, modules, optimizer, aux_loss_fn=None, tracker=None, m
 		# (1) run through recognition model
 		out, evd_obs, evd_msk, aux_obs = modules['recog_net'](batch, args.device)
 		
-		# (2) draw z(0) from initial state distribution Normal(z|mu(x),sigma(x))
+		# (2) draw z(t_0) from initial state distribution Normal(z|mu(x),sigma(x))
 		qz0_mean, qz0_logvar = out[:, :args.z_dim], out[:, args.z_dim:]
 		epsilon = torch.randn(qz0_mean.size()).to(args.device)
 		z0 = epsilon * torch.exp(.5 * qz0_logvar) + qz0_mean
 		
-		# (3) integrate latent ODE forward
+		# (3) integrate latent ODE forward to time points in t
 		zs = odeint(modules['lnode_net'], z0, t, method="euler").permute(1, 0, 2)
 		
 		# (4) run through reconstruction network and parametrize p(x|z), then comp. log-likelihood
@@ -124,15 +250,16 @@ def run_epoch(args, dl, t, modules, optimizer, aux_loss_fn=None, tracker=None, m
 		numel = reduce(evd_msk.unsqueeze(0)[0], "b ... -> b", "sum")
 		log_pxz /= numel
 
-		# (5) compute KL divergence on initial state distribution w.r.t. prior p(z)        
+		# (5) compute KL divergence between approximate posterior q(z|x) and prior p(z)        
 		pz0_mean = pz0_logvar = torch.zeros(z0.size()).to(args.device)
 		kld = normal_kl(qz0_mean, qz0_logvar, pz0_mean, pz0_logvar).sum(-1).unsqueeze(0)
 	
+		# (6) summarize latent path and run summary through regression network
 		aux_enc = modules['processor'](zs) 
 		aux_out = modules['regressor'](aux_enc)
 		aux_loss = aux_loss_fn(aux_out.flatten(), aux_obs.flatten())
 		
-		# ELBO + aux. loss
+		# (7) compute augmented ELBO
 		loss = (log_pxz + args.kl_weight*kld).mean() + args.aux_weight*aux_loss
 		
 		if mode == 'train':
@@ -140,7 +267,7 @@ def run_epoch(args, dl, t, modules, optimizer, aux_loss_fn=None, tracker=None, m
 			loss.backward()        
 			optimizer.step()
 		
-		# track predictions and ground truths for later
+		# track predictions and ground truths
 		with torch.no_grad():
 			aux_p.append(aux_out.detach().cpu())
 			aux_t.append(aux_obs.detach().cpu())    
@@ -161,7 +288,7 @@ def run_epoch(args, dl, t, modules, optimizer, aux_loss_fn=None, tracker=None, m
 
 def create_recog_backbone(args):
 	if args.backbone == 'topdyn_only': return TDABackbone(args)
-	elif args.backbone == 'ptsdyn_only':return PointNetBackbone(args)
+	elif args.backbone == 'ptsdyn_only': return PointNetBackbone(args)
 	elif args.backbone == 'joint': return JointBackbone(args)
 	else: raise NotImplementedError    
 
@@ -205,7 +332,7 @@ def load_data(args):
 		return JointDataset([ds_topdyn, ds_ptsdyn])
 	else:
 		raise NotImplementedError()
-	
+
 
 def create_processor(args):
 	if args.processor == 'z_mtantwins':        
@@ -231,34 +358,36 @@ def create_processor(args):
 
 
 def main():
-	trn_tracker = defaultdict(list) # track training stats
-	tst_tracker = defaultdict(list) # track testing stats
+	trn_tracker = defaultdict(list) # track trn stats
+	tst_tracker = defaultdict(list) # track tst stats
 	
 	spinner = Halo(spinner='dots')
 	
+	# setup command line parsing
 	parser = setup_cmdline_parsing()
 	args = parser.parse_args()
 	print(args)
 	
+	# setup tensorboard
 	writer = SummaryWriter(os.path.join(args.run_dir, args.experiment_id))
 	
 	spinner.start('Loading data')
 	ds = load_data(args)
-	spinner.succeed('Loaded data!')
+	spinner.succeed()
 
 	spinner.start('Patching command line args')
 	args_dict = vars(args)
 	args_dict['vec_inp_dim'] = ds.num_vec_dim
 	args_dict['num_aux_dim'] = ds.num_aux_dim
 	args_dict['num_timepts'] = ds.num_timepts
-	spinner.succeed('Patched command line args!')
+	spinner.succeed()
 
-	spinner.start('Subsampling')
+	spinner.start('Subsampling time points')
 	if args.tps_frac > 0:
 		assert args.tps_frac < 1, 'Timepoint subsampling not in range (0,1)'
 		indices = create_sampling_indices(len(ds), args.num_timepts, int(args.tps_frac*args.num_timepts)) 
 		ds.subsample(indices) 
-	spinner.succeed('Subsampled!')
+	spinner.succeed()
 	
 	# make sure splits are the same for a given seed
 	generator = torch.Generator().manual_seed(args.seed) 
@@ -266,8 +395,8 @@ def main():
 	dl_trn = DataLoader(trn_set, batch_size=args.batch_size, shuffle=True, collate_fn=ds.get_collate())
 	dl_tst = DataLoader(tst_set, batch_size=args.batch_size, shuffle=False, collate_fn=ds.get_collate())
 
-	recog_backbone = create_recog_backbone(args)
-	recon_backbone = create_recon_backbone(args)
+	recog_backbone = create_recog_backbone(args) 
+	recon_backbone = create_recon_backbone(args) 
 	processor = create_processor(args)
 
 	modules = nn.ModuleDict(
@@ -301,12 +430,12 @@ def main():
 			lr=args.lr, weight_decay=args.weight_decay
 	)
 	
-	
 	optimizer = Adam(modules.parameters(), lr=args.lr, weight_decay=args.weight_decay)
 	scheduler = CosineAnnealingLR(optimizer, args.restart, eta_min=0, last_epoch=-1)
-	aux_loss_fn = nn.MSELoss()#nn.HuberLoss()#MSELoss()
+	aux_loss_fn = nn.MSELoss()
 
 	for epoch_cnt in range(args.n_epochs):
+		# training 
 		run_epoch(args, 
 			dl_trn, 
 			t, 
@@ -315,6 +444,7 @@ def main():
 			aux_loss_fn, 
 			trn_tracker, 
 			mode='train')
+		# testing
 		with torch.no_grad():
 			run_epoch(args, 
 				dl_tst, 
@@ -326,12 +456,13 @@ def main():
 				mode='test')
 		scheduler.step()
 		
-		
+		# what scores to track throughout training/testing
 		scorefns = {'r2s': r2_score, 
 					'mse': mean_squared_error}
 		trackers = {'trn': trn_tracker, 
 					'tst': tst_tracker}
 		
+		# compute scores
 		scores = defaultdict(list)
 		for scorefn_key, trackers_key in product(scorefns, trackers):  
 			key_str = scorefn_key + "_" + trackers_key   

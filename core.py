@@ -13,21 +13,24 @@ from torch_geometric.data import Data, Batch
 from torch_geometric.nn import global_max_pool
 from torch_geometric.nn import MessagePassing
 
+
+# region PointNet++
 class PointNetLayer(MessagePassing):
     def __init__(self, in_channels: int, out_channels: int):
         # Message passing with "max" aggregation.
-        super().__init__(aggr='max')
+        super().__init__(aggr="max")
 
         # Initialization of the MLP:
         # Here, the number of input features correspond to the hidden
         # node dimensionality plus point dimensionality (=3).
         self.mlp = nn.Sequential(
-            nn.Linear(in_channels + 3, out_channels), # szeng needs this as arg
+            nn.Linear(in_channels + 3, out_channels),  # szeng needs this as arg
             nn.ReLU(),
             nn.Linear(out_channels, out_channels),
         )
 
-    def forward(self,
+    def forward(
+        self,
         h: torch.Tensor,
         pos: torch.Tensor,
         edge_index: torch.Tensor,
@@ -35,7 +38,8 @@ class PointNetLayer(MessagePassing):
         # Start propagating messages.
         return self.propagate(edge_index, h=h, pos=pos)
 
-    def message(self,
+    def message(
+        self,
         h_j: torch.Tensor,
         pos_j: torch.Tensor,
         pos_i: torch.Tensor,
@@ -47,14 +51,16 @@ class PointNetLayer(MessagePassing):
         edge_feat = torch.cat([h_j, pos_j - pos_i], dim=-1)
         return self.mlp(edge_feat)
 
+
 class PointNet(torch.nn.Module):
-    def __init__(self, h_dim:int=32):
+    def __init__(self, h_dim: int = 32):
         super().__init__()
 
-        self.conv1 = PointNetLayer(    3, h_dim)
+        self.conv1 = PointNetLayer(3, h_dim)
         self.conv2 = PointNetLayer(h_dim, h_dim)
 
-    def forward(self,
+    def forward(
+        self,
         pos: torch.Tensor,
         edge_index: torch.Tensor,
         batch: torch.Tensor,
@@ -69,21 +75,24 @@ class PointNet(torch.nn.Module):
         # Global Pooling:
         h = global_max_pool(h, batch)  # [num_examples, hidden_channels]
         return h
+# endregion
 
 class SignatureHead(nn.Module):
-    def __init__(self, in_channels, sig_depth):
+    def __init__(self, in_channels: int, sig_depth: int):
         super(SignatureHead, self).__init__()
-        self.augment = signatory.Augment(in_channels=in_channels,
+        self.augment = signatory.Augment(
+            in_channels=in_channels,
             layer_sizes=(8, 8, 2),
             kernel_size=4,
             include_original=True,
-            include_time=True)
+            include_time=True,
+        )
         self.signature = signatory.Signature(depth=sig_depth)
         # +3 because signatory.Augment is used to add time, and 2 other channels,
         # as well
         self.sig_channels = signatory.signature_channels(
-            channels=in_channels + 3,
-            depth=sig_depth)
+            channels=in_channels + 3, depth=sig_depth
+        )
 
     def get_outdim(self):
         return self.sig_channels
@@ -92,24 +101,26 @@ class SignatureHead(nn.Module):
         # inp is a three dimensional tensor of shape (batch, stream, in_channels)
         x = self.augment(inp)
         if x.size(1) <= 1:
-            raise RuntimeError("Given an input with too short a stream to take the signature")
+            raise RuntimeError(
+                "Given an input with too short a stream to take the signature"
+            )
         y = self.signature(x, basepoint=True)
         return y
 
 
 class LatentStateHead(nn.Module):
-    def __init__(self, in_channels, type="last"):
+    def __init__(self, in_channels: int, type:str="last"):
         super(LatentStateHead, self).__init__()
-        assert type in ['last', 'mean']
+        assert type in ["last", "mean"]
         self.type = type
         self.outdim = in_channels
 
-    def get_outdim(self):
+    def get_outdim(self) -> int:
         return self.outdim
 
     def forward(self, x):
         if self.type == "last":
-            return x[:,-1,:]
+            return x[:, -1, :]
         elif self.type == "mean":
             return x.mean(dim=1)
         else:
@@ -117,40 +128,44 @@ class LatentStateHead(nn.Module):
 
 
 class TDABackbone(nn.Module):
+    """Runs PH vectorizations through an mTAN encoder."""
     def __init__(self, args):
         super(TDABackbone, self).__init__()
-        self.num_timepts =args.num_timepts
+        self.num_timepts = args.num_timepts
         self.recog_net = VecRecogNet(
             mtan_input_dim=args.vec_inp_dim,
             mtan_hidden_dim=args.mtan_h_dim,
-            latent_dim = args.z_dim,
-            use_atanh=False)
+            latent_dim=args.z_dim,
+            use_atanh=False,
+        )
 
     def forward(self, batch, device):
         parts = {key: val.to(device) for key, val in batch.items()}
-        parts_inp_obs = parts['inp_obs']
-        parts_inp_msk = parts['inp_msk']
-        parts_inp_tps = parts['inp_tps']
+        parts_inp_obs = parts["inp_obs"]
+        parts_inp_msk = parts["inp_msk"]
+        parts_inp_tps = parts["inp_tps"]
         inp = (parts_inp_obs, parts_inp_msk, parts_inp_tps)
-        return self.recog_net(inp), parts['evd_obs'], parts['evd_msk'], parts['aux_obs']
+        return self.recog_net(inp), parts["evd_obs"], parts["evd_msk"], parts["aux_obs"]
 
 
 class TDABare(nn.Module):
+    """Directly passes PH vectorizations (without any recognition network) forward."""
     def __init__(self, args):
         super(TDABare, self).__init__()
         self.num_timepts = args.num_timepts
 
     def forward(self, batch, device):
         parts = {key: val.to(device) for key, val in batch.items()}
-        parts_inp_obs = parts['inp_obs']
-        parts_inp_msk = parts['inp_msk']
-        parts_inp_tps = parts['inp_tps']
+        parts_inp_obs = parts["inp_obs"]
+        parts_inp_msk = parts["inp_msk"]
+        parts_inp_tps = parts["inp_tps"]
         inp = (parts_inp_obs, parts_inp_msk, parts_inp_tps)
 
-        return inp, parts['evd_obs'], parts['evd_msk'], parts['aux_obs']
+        return inp, parts["evd_obs"], parts["evd_msk"], parts["aux_obs"]
 
 
 class PointNetBackbone(nn.Module):
+    """Runs point clouds through a PointNet++ and then through an mTAN encoder."""
     def __init__(self, args):
         super(PointNetBackbone, self).__init__()
         self.num_timepts = args.num_timepts
@@ -158,78 +173,89 @@ class PointNetBackbone(nn.Module):
         self.recog_net = VecRecogNet(
             mtan_input_dim=args.pointnet_dim,
             mtan_hidden_dim=args.mtan_h_dim,
-            latent_dim = args.z_dim,
-            use_atanh=False)
+            latent_dim=args.z_dim,
+            use_atanh=False,
+        )
 
     def forward(self, batch, device):
-        pts_msk_batch = batch['pts_msk_batch'].to(device)
-        pts_tid_batch = batch['pts_tid_batch'].to(device)
-        pts_aux_batch = batch['pts_aux_batch'].to(device)
-        pts_cut_batch = batch['pts_cut_batch']
+        pts_msk_batch = batch["pts_msk_batch"].to(device)
+        pts_tid_batch = batch["pts_tid_batch"].to(device)
+        pts_aux_batch = batch["pts_aux_batch"].to(device)
+        pts_cut_batch = batch["pts_cut_batch"]
 
-        pts_obs_batch = batch['pts_obs_batch']
+        pts_obs_batch = batch["pts_obs_batch"]
         pts_obs_batch = Batch.from_data_list(pts_obs_batch)
         pts_obs_batch = pts_obs_batch.to(device)
 
-        enc = self.point_net(pts_obs_batch.pos, pts_obs_batch.edge_index, pts_obs_batch.batch)
+        enc = self.point_net(
+            pts_obs_batch.pos, pts_obs_batch.edge_index, pts_obs_batch.batch
+        )
         enc = enc.tensor_split(pts_cut_batch, dim=0)
         enc = torch.stack(enc)
 
-        N,T,D = enc.shape
-        parts_inp_obs = torch.zeros(N,self.num_timepts,D,device=device)
-        parts_inp_msk = torch.zeros(N,self.num_timepts,D,device=device)
-        parts_inp_tps = torch.zeros(N,self.num_timepts,device=device)
-        parts_inp_obs[:,:T] = enc
-        parts_inp_tps[:,:T] = pts_tid_batch/self.num_timepts
-        parts_inp_msk[:,:T] = 1
+        N, T, D = enc.shape
+        parts_inp_obs = torch.zeros(N, self.num_timepts, D, device=device)
+        parts_inp_msk = torch.zeros(N, self.num_timepts, D, device=device)
+        parts_inp_tps = torch.zeros(N, self.num_timepts, device=device)
+        parts_inp_obs[:, :T] = enc
+        parts_inp_tps[:, :T] = pts_tid_batch / self.num_timepts
+        parts_inp_msk[:, :T] = 1
         inp = (parts_inp_obs, parts_inp_msk, parts_inp_tps)
 
-        pts_tid_batch = pts_tid_batch.view(pts_tid_batch.shape + torch.Size([1])).expand_as(enc)
-        evd_obs = torch.zeros(N,self.num_timepts,D,device=device)
-        evd_obs.scatter_(1,pts_tid_batch,enc)
-        evd_msk = pts_msk_batch.expand(N,self.num_timepts,D)
+        pts_tid_batch = pts_tid_batch.view(
+            pts_tid_batch.shape + torch.Size([1])
+        ).expand_as(enc)
+        evd_obs = torch.zeros(N, self.num_timepts, D, device=device)
+        evd_obs.scatter_(1, pts_tid_batch, enc)
+        evd_msk = pts_msk_batch.expand(N, self.num_timepts, D)
 
         return self.recog_net(inp), evd_obs, evd_msk, pts_aux_batch
 
 
 class PointNetBare(nn.Module):
+    """Runs point clouds through a PointNet++ and then directly passes the output forward."""
     def __init__(self, args):
         super(PointNetBare, self).__init__()
         self.num_timepts = args.num_timepts
         self.point_net = PointNet(h_dim=args.pointnet_dim)
 
     def forward(self, batch, device):
-        pts_msk_batch = batch['pts_msk_batch'].to(device)
-        pts_tid_batch = batch['pts_tid_batch'].to(device)
-        pts_aux_batch = batch['pts_aux_batch'].to(device)
-        pts_cut_batch = batch['pts_cut_batch']
+        pts_msk_batch = batch["pts_msk_batch"].to(device)
+        pts_tid_batch = batch["pts_tid_batch"].to(device)
+        pts_aux_batch = batch["pts_aux_batch"].to(device)
+        pts_cut_batch = batch["pts_cut_batch"]
 
-        pts_obs_batch = batch['pts_obs_batch']
+        pts_obs_batch = batch["pts_obs_batch"]
         pts_obs_batch = Batch.from_data_list(pts_obs_batch)
         pts_obs_batch = pts_obs_batch.to(device)
 
-        enc = self.point_net(pts_obs_batch.pos, pts_obs_batch.edge_index, pts_obs_batch.batch)
+        enc = self.point_net(
+            pts_obs_batch.pos, pts_obs_batch.edge_index, pts_obs_batch.batch
+        )
         enc = enc.tensor_split(pts_cut_batch, dim=0)
         enc = torch.stack(enc)
 
-        N,T,D = enc.shape
-        parts_inp_obs = torch.zeros(N,self.num_timepts,D,device=device)
-        parts_inp_msk = torch.zeros(N,self.num_timepts,D,device=device)
-        parts_inp_tps = torch.zeros(N,self.num_timepts,device=device)
-        parts_inp_obs[:,:T] = enc
-        parts_inp_tps[:,:T] = pts_tid_batch/self.num_timepts
-        parts_inp_msk[:,:T] = 1
+        N, T, D = enc.shape
+        parts_inp_obs = torch.zeros(N, self.num_timepts, D, device=device)
+        parts_inp_msk = torch.zeros(N, self.num_timepts, D, device=device)
+        parts_inp_tps = torch.zeros(N, self.num_timepts, device=device)
+        parts_inp_obs[:, :T] = enc
+        parts_inp_tps[:, :T] = pts_tid_batch / self.num_timepts
+        parts_inp_msk[:, :T] = 1
         inp = (parts_inp_obs, parts_inp_msk, parts_inp_tps)
 
-        pts_tid_batch = pts_tid_batch.view(pts_tid_batch.shape + torch.Size([1])).expand_as(enc)
-        evd_obs = torch.zeros(N,self.num_timepts,D,device=device)
-        evd_obs.scatter_(1,pts_tid_batch,enc)
-        evd_msk = pts_msk_batch.expand(N,self.num_timepts,D)
+        pts_tid_batch = pts_tid_batch.view(
+            pts_tid_batch.shape + torch.Size([1])
+        ).expand_as(enc)
+        evd_obs = torch.zeros(N, self.num_timepts, D, device=device)
+        evd_obs.scatter_(1, pts_tid_batch, enc)
+        evd_msk = pts_msk_batch.expand(N, self.num_timepts, D)
 
         return inp, evd_obs, evd_msk, pts_aux_batch
 
 
 class JointBackbone(nn.Module):
+    """Combines a TDABackone with a PointNet backbone."""
     def __init__(self, args):
         super(JointBackbone, self).__init__()
         self.num_timepts = args.num_timepts
@@ -237,47 +263,54 @@ class JointBackbone(nn.Module):
         self.recog_net = VecRecogNet(
             mtan_input_dim=args.vec_inp_dim + args.pointnet_dim,
             mtan_hidden_dim=args.mtan_h_dim,
-            latent_dim = args.z_dim,
-            use_atanh=False)
+            latent_dim=args.z_dim,
+            use_atanh=False,
+        )
 
     def forward(self, batch, device):
-        batch_tda = batch['tda_obs_batch']
+        batch_tda = batch["tda_obs_batch"]
         parts = {key: val.to(device) for key, val in batch_tda.items()}
-        parts_inp_obs = parts['inp_obs']
-        parts_inp_msk = parts['inp_msk']
-        parts_inp_tps = parts['inp_tps']
+        parts_inp_obs = parts["inp_obs"]
+        parts_inp_msk = parts["inp_msk"]
+        parts_inp_tps = parts["inp_tps"]
 
-        pts_aux_batch = batch['pts_aux_batch'].to(device)
-        pts_tid_batch = batch['pts_tid_batch'].to(device)
-        pts_cut_batch = batch['pts_cut_batch']
-        pts_obs_batch = batch['pts_obs_batch']
+        pts_aux_batch = batch["pts_aux_batch"].to(device)
+        pts_tid_batch = batch["pts_tid_batch"].to(device)
+        pts_cut_batch = batch["pts_cut_batch"]
+        pts_obs_batch = batch["pts_obs_batch"]
         pts_obs_batch = Batch.from_data_list(pts_obs_batch)
         pts_obs_batch = pts_obs_batch.to(device)
 
-        enc = self.point_net(pts_obs_batch.pos, pts_obs_batch.edge_index, pts_obs_batch.batch)
+        enc = self.point_net(
+            pts_obs_batch.pos, pts_obs_batch.edge_index, pts_obs_batch.batch
+        )
         enc = enc.tensor_split(pts_cut_batch, dim=0)
         enc = torch.stack(enc)
 
-        N,T,D = enc.shape
-        enc_ext = torch.zeros(N,self.num_timepts,D,device=device)
-        enc_ext[:,:T] = enc
+        N, T, D = enc.shape
+        enc_ext = torch.zeros(N, self.num_timepts, D, device=device)
+        enc_ext[:, :T] = enc
 
         parts_inp_obs = torch.cat((parts_inp_obs, enc_ext), dim=2)  # N,T,D
-        parts_inp_msk = parts_inp_msk[:,:,0].view(
-            parts_inp_obs.shape[0],
-            parts_inp_obs.shape[1],1).expand(
-                parts_inp_obs.shape[0],
-                parts_inp_obs.shape[1],
-                parts_inp_obs.shape[2])
+        parts_inp_msk = (
+            parts_inp_msk[:, :, 0]
+            .view(parts_inp_obs.shape[0], parts_inp_obs.shape[1], 1)
+            .expand(
+                parts_inp_obs.shape[0], parts_inp_obs.shape[1], parts_inp_obs.shape[2]
+            )
+        )
 
-        pts_tid_batch = pts_tid_batch.view(pts_tid_batch.shape + torch.Size([1])).expand_as(enc)
-        evd_obs = torch.zeros(N,self.num_timepts,D,device=device)
-        evd_obs.scatter_(1,pts_tid_batch,enc)
-        evd_obs = torch.cat((evd_obs, parts['evd_obs']),dim=2)
-        evd_msk = parts['evd_msk'][:,:,0].view(evd_obs.shape[0],evd_obs.shape[1],1).expand(
-            evd_obs.shape[0],
-            evd_obs.shape[1],
-            evd_obs.shape[2])
+        pts_tid_batch = pts_tid_batch.view(
+            pts_tid_batch.shape + torch.Size([1])
+        ).expand_as(enc)
+        evd_obs = torch.zeros(N, self.num_timepts, D, device=device)
+        evd_obs.scatter_(1, pts_tid_batch, enc)
+        evd_obs = torch.cat((evd_obs, parts["evd_obs"]), dim=2)
+        evd_msk = (
+            parts["evd_msk"][:, :, 0]
+            .view(evd_obs.shape[0], evd_obs.shape[1], 1)
+            .expand(evd_obs.shape[0], evd_obs.shape[1], evd_obs.shape[2])
+        )
 
         inp = (parts_inp_obs, parts_inp_msk, parts_inp_tps)
         return self.recog_net(inp), evd_obs, evd_msk, pts_aux_batch
@@ -289,54 +322,63 @@ class JointBare(nn.Module):
         self.point_net = PointNet(h_dim=args.pointnet_dim)
 
     def forward(self, batch, device):
-        batch_tda = batch['tda_obs_batch']
+        batch_tda = batch["tda_obs_batch"]
         parts = {key: val.to(device) for key, val in batch_tda.items()}
-        parts_inp_obs = parts['inp_obs']
-        parts_inp_msk = parts['inp_msk']
-        parts_inp_tps = parts['inp_tps']
+        parts_inp_obs = parts["inp_obs"]
+        parts_inp_msk = parts["inp_msk"]
+        parts_inp_tps = parts["inp_tps"]
 
-        pts_aux_batch = batch['pts_aux_batch'].to(device)
-        pts_tid_batch = batch['pts_tid_batch'].to(device)
-        pts_cut_batch = batch['pts_cut_batch']
-        pts_obs_batch = batch['pts_obs_batch']
+        pts_aux_batch = batch["pts_aux_batch"].to(device)
+        pts_tid_batch = batch["pts_tid_batch"].to(device)
+        pts_cut_batch = batch["pts_cut_batch"]
+        pts_obs_batch = batch["pts_obs_batch"]
         pts_obs_batch = Batch.from_data_list(pts_obs_batch)
         pts_obs_batch = pts_obs_batch.to(device)
 
-        enc = self.point_net(pts_obs_batch.pos, pts_obs_batch.edge_index, pts_obs_batch.batch)
+        enc = self.point_net(
+            pts_obs_batch.pos, pts_obs_batch.edge_index, pts_obs_batch.batch
+        )
         enc = enc.tensor_split(pts_cut_batch, dim=0)
         enc = torch.stack(enc)
 
-        N,T,D = enc.shape
-        enc_ext = torch.zeros(N,self.num_timepts,D,device=device)
-        enc_ext[:,:T] = enc
+        N, T, D = enc.shape
+        enc_ext = torch.zeros(N, self.num_timepts, D, device=device)
+        enc_ext[:, :T] = enc
 
         parts_inp_obs = torch.cat((parts_inp_obs, enc_ext), dim=2)  # N,T,D
-        parts_inp_msk = parts_inp_msk[:,:,0].view(
-            parts_inp_obs.shape[0],
-            parts_inp_obs.shape[1],1).expand(
-                parts_inp_obs.shape[0],
-                parts_inp_obs.shape[1],
-                parts_inp_obs.shape[2])
+        parts_inp_msk = (
+            parts_inp_msk[:, :, 0]
+            .view(parts_inp_obs.shape[0], parts_inp_obs.shape[1], 1)
+            .expand(
+                parts_inp_obs.shape[0], parts_inp_obs.shape[1], parts_inp_obs.shape[2]
+            )
+        )
 
-        pts_tid_batch = pts_tid_batch.view(pts_tid_batch.shape + torch.Size([1])).expand_as(enc)
-        evd_obs = torch.zeros(N,self.num_timepts,D,device=device)
-        evd_obs.scatter_(1,pts_tid_batch,enc)
-        evd_obs = torch.cat((evd_obs, parts['evd_obs']),dim=2)
-        evd_msk = parts['evd_msk'][:,:,0].view(evd_obs.shape[0],evd_obs.shape[1],1).expand(
-            evd_obs.shape[0],
-            evd_obs.shape[1],
-            evd_obs.shape[2])
+        pts_tid_batch = pts_tid_batch.view(
+            pts_tid_batch.shape + torch.Size([1])
+        ).expand_as(enc)
+        evd_obs = torch.zeros(N, self.num_timepts, D, device=device)
+        evd_obs.scatter_(1, pts_tid_batch, enc)
+        evd_obs = torch.cat((evd_obs, parts["evd_obs"]), dim=2)
+        evd_msk = (
+            parts["evd_msk"][:, :, 0]
+            .view(evd_obs.shape[0], evd_obs.shape[1], 1)
+            .expand(evd_obs.shape[0], evd_obs.shape[1], evd_obs.shape[2])
+        )
 
         inp = (parts_inp_obs, parts_inp_msk, parts_inp_tps)
         return inp, evd_obs, evd_msk, pts_aux_batch
 
 class MTANHead(nn.Module):
+    """Implements the mTAN twin of the encoder. However, this one operates
+    directly on latent state trajectories.
+    """
     def __init__(
         self,
         mtan_input_dim: int = 32,
         mtan_hidden_dim: int = 32,
         num_timepts: int = 100,
-        use_atanh: bool = False
+        use_atanh: bool = False,
     ) -> None:
         super().__init__()
         self.mtan_input_dim = mtan_input_dim
@@ -350,15 +392,20 @@ class MTANHead(nn.Module):
             nhidden=mtan_hidden_dim,
             embed_time=128,
             num_heads=4,
-            learn_emb=self.learn_emb
+            learn_emb=self.learn_emb,
         )
-    def get_outdim(self):
+
+    def get_outdim(self) -> int:
         return self.mtan_hidden_dim
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         observed_data = x
         observed_mask = torch.ones_like(x)
-        observed_tp = torch.linspace(0, 1.0, self.num_timepts, device=x.device).unsqueeze(0).expand(x.shape[0],-1)
+        observed_tp = (
+            torch.linspace(0, 1.0, self.num_timepts, device=x.device)
+            .unsqueeze(0)
+            .expand(x.shape[0], -1)
+        )
         h = self.mtan(torch.cat((observed_data, observed_mask), 2), observed_tp)
         if self.use_atanh:
             eps = 1e-5
@@ -367,25 +414,28 @@ class MTANHead(nn.Module):
         return h
 
 
-
-def normal_kl(mu1, lv1, mu2, lv2):
+def normal_kl(mu1: torch.Tensor, lv1: torch.Tensor, mu2: torch.Tensor, lv2: torch.Tensor):
+    """Implements the KL divergence for normal distributions."""
     v1 = torch.exp(lv1)
     v2 = torch.exp(lv2)
-    lstd1 = lv1 / 2.
-    lstd2 = lv2 / 2.
+    lstd1 = lv1 / 2.0
+    lstd2 = lv2 / 2.0
 
-    kl = lstd2 - lstd1 + ((v1 + (mu1 - mu2) ** 2.) / (2. * v2)) - .5
+    kl = lstd2 - lstd1 + ((v1 + (mu1 - mu2) ** 2.0) / (2.0 * v2)) - 0.5
     return kl
 
 
 class VecRecogNetBaseline(nn.Module):
+    """Implements the mTAN baseline, i.e., directly predicting simulation parameters
+    from the encoder output.
+    """
     def __init__(
         self,
         mtan_input_dim: int = 32,
         mtan_hidden_dim: int = 32,
         mtan_embed_time: int = 128,
         mtan_num_queries: int = 128,
-        use_atanh: bool = False
+        use_atanh: bool = False,
     ) -> None:
         super().__init__()
         self.mtan_input_dim = mtan_input_dim
@@ -400,7 +450,7 @@ class VecRecogNetBaseline(nn.Module):
             nhidden=mtan_hidden_dim,
             embed_time=mtan_embed_time,
             num_heads=1,
-            learn_emb=self.learn_emb
+            learn_emb=self.learn_emb,
         )
 
     def extra_repr(self) -> str:
@@ -418,13 +468,14 @@ class VecRecogNetBaseline(nn.Module):
             h = h.atanh()
         return h
 
+
 class VecRecogNet(nn.Module):
     def __init__(
         self,
         mtan_input_dim: int = 32,
         mtan_hidden_dim: int = 32,
         latent_dim: int = 16,
-        use_atanh: bool = False
+        use_atanh: bool = False,
     ) -> None:
         super().__init__()
         self.mtan_input_dim = mtan_input_dim
@@ -433,14 +484,14 @@ class VecRecogNet(nn.Module):
         self.learn_emb = True
         self.mtan = MTANEncoder(
             input_dim=mtan_input_dim,
-            query=torch.linspace(0, 1.0, 128), # tested with 64 in ablation
+            query=torch.linspace(0, 1.0, 128),  # tested with 64 in ablation
             nhidden=mtan_hidden_dim,
-            embed_time=128, # tested with 64 in ablation
+            embed_time=128,  # tested with 64 in ablation
             num_heads=1,
-            learn_emb=self.learn_emb
+            learn_emb=self.learn_emb,
         )
 
-        self.h_to_z = nn.Linear(mtan_hidden_dim, latent_dim*2)
+        self.h_to_z = nn.Linear(mtan_hidden_dim, latent_dim * 2)
 
     def extra_repr(self) -> str:
         return (
@@ -459,22 +510,23 @@ class VecRecogNet(nn.Module):
 
 
 class VecReconNet(nn.Module):
-    def __init__(self, z_dim: int = 16, h_dim: int=32, x_dim: int = 10) -> None:
+    """Implements the reconstruction network via a simple MLP."""
+    def __init__(self, z_dim: int=16, h_dim: int=32, x_dim: int=10) -> None:
         super(VecReconNet, self).__init__()
         self.z_dim = z_dim
         self.h_dim = h_dim
         self.x_dim = x_dim
         self.map = nn.Sequential(
-            nn.Linear(in_features = z_dim, out_features= h_dim),
+            nn.Linear(in_features=z_dim, out_features=h_dim),
             nn.ReLU(),
-            nn.Linear(in_features = h_dim, out_features = x_dim))
-        #self.map = nn.Linear(in_features = z_dim, out_features= x_dim)
+            nn.Linear(in_features=h_dim, out_features=x_dim),
+        )
 
     def forward(self, z):
         return self.map(z)
 
 
-# from torchdiffeq examples
+# taken from torchdiffeq (repo) examples
 class LatentODEfunc(nn.Module):
     def __init__(self, z_dim=4, h_dim=20):
         super(LatentODEfunc, self).__init__()
@@ -495,10 +547,11 @@ class LatentODEfunc(nn.Module):
 
 
 class PathToGaussianDecoder(nn.Module):
-    def __init__(self,
-                mu_map: nn.Module,
-                sigma_map: Optional[nn.Module] = None,
-                initial_sigma: float = 1.
+    def __init__(
+        self,
+        mu_map: nn.Module,
+        sigma_map: Optional[nn.Module] = None,
+        initial_sigma: float = 1.0,
     ) -> None:
         super().__init__()
         self.mu_map = mu_map
@@ -511,7 +564,7 @@ class PathToGaussianDecoder(nn.Module):
         if self.sigma_map is None:
             s = f"initial_sigma={self.initial_sigma}"
         else:
-            s=""
+            s = ""
         return s
 
     def forward(self, x: torch.Tensor) -> Normal:
@@ -528,6 +581,7 @@ class PathToGaussianDecoder(nn.Module):
         return Normal(mu, sigma.square())
 
 
+# region mTAN core
 class MultiTimeAttention(nn.Module):
     def __init__(
         self,
@@ -607,11 +661,11 @@ class EncMtanRnn(nn.Module):
         nhidden: int = 16,
         embed_time: int = 16,
         num_heads: int = 1,
-        learn_emb: bool = False
+        learn_emb: bool = False,
     ) -> None:
         super().__init__()
         self.input_dim = input_dim  # self.dim
-        self.register_buffer('query', query)
+        self.register_buffer("query", query)
         self.latent_dim = latent_dim
         self.nhidden = nhidden
         self.embed_time = embed_time
@@ -674,16 +728,10 @@ class MTANEncoder(EncMtanRnn):
         nhidden: int = 16,
         embed_time: int = 16,
         num_heads: int = 1,
-        learn_emb: bool = False
+        learn_emb: bool = False,
     ) -> None:
         super().__init__(
-            input_dim,
-            query,
-            latent_dim,
-            nhidden,
-            embed_time,
-            num_heads,
-            learn_emb
+            input_dim, query, latent_dim, nhidden, embed_time, num_heads, learn_emb
         )
         self.input_dim = input_dim
         self.query = query
@@ -715,6 +763,4 @@ class MTANEncoder(EncMtanRnn):
         out = self.att(query, key, x, mask)
         _, out = self.gru_rnn(out)
         return out.squeeze(0)
-
-
-
+# endregion

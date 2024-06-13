@@ -14,22 +14,27 @@ If you use the code please cite as:
       primaryClass={cs.LG}
 }
 ```
+
 ## Contents
 - [Setup](#setup)
 - [Replicating experiments (with precomputed simulations)](#replicating-experiments)
 - [Running your own simulations](#running-your-own-simulations)
+
 ## Setup
 In the following, we assume that the repository has been cloned into `/tmp/neural_persistence_dynamics`.
+
 ### Setup a new Anaconda environment
 ```bash
 conda create -n "pytorch23" python=3.10
 conda activate pytorch23
 ```
+
 ### Install ```pytorch```
 ```bash
 conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
 python -c 'import torch' # check
 ```
+
 ### Installing `torchph`
 ```bash
 cd /tmp/neural_persistence_dynamics
@@ -39,19 +44,23 @@ git clone https://github.com/c-hofer/torchph.git
 conda develop torchph
 python -c 'import torchph' # check
 ```
+
 ### Installing `torchdiffeq`
 ```bash
 pip3 install torchdiffeq
 python -c 'import torchdiffeq' # check
 ```
+
 ### Installing `ripser-plusplus`
 ```bash
 pip3 install git+https://github.com/simonzhang00/ripser-plusplus.git
 ```
+
 ### Installing other required packages
 ```bash
 pip install tensorboard, halo, einops, h5py
 ```
+
 ### Create folder structure
 ```bash
 cd /tmp/neural_persistence_dynamics
@@ -59,10 +68,10 @@ mkdir -p data # stores all data
 mkdir -p logs # stores all logs
 mkdir -p runs # stores all tensorboard related stuff
 ```
+
 ## Replicating experiments
 
-In the following, we replicate the experiments with the `dorsogna-1k` data from then paper. All other experiments
-follow the same procedure.
+In the following, we replicate the experiments with the `dorsogna-1k` data from then paper. All other experiments follow the same procedure.
 
 ### Downloading precomputed simulation data
 ```bash
@@ -81,7 +90,9 @@ python download.py --dataset dorsogna-1k --destination data/Giusti23a/1k
 This will compute all Vietoris-Rips persistence diagrams for $H_0$ and $H_1$ 
 (by default; in case you also want $H_2$ add `--max-dim 2` on the command line).
 Diagrams are saved to `data/Giusti23a/1k/dgms_1k_vr_h0h1.pt`.
+
 ### Computing vectorizations
+
 Next, we can compute the vectorizations:
 ```python
 python compute_vec.py \
@@ -157,133 +168,6 @@ R2 score (averaged over all parameters).
 
 
 ### Saving / Loading models
-
-## Precomputed simulation data
-## Running your own simulations
-To run your own simulations, you also need to install the `sysiphe` package.
-
-
-Offical repository for [Neural Persistence Dynamics](https://arxiv.org/abs/2405.15732)
-
-```bibtex
-S. Zeng, F.Graf, M. Uray, S. Huber and R. Kwitt
-Neural Persistence Dynamics
-arXiv preprint, 2024
-```
-
-
-## Contents
-- [Setup](#setup)
-- [Replicating experiments (with precomputed simulations)](#replicating-experiments)
-- [Running your own simulations](#running-your-own-simulations)
-
-## Setup
-
-In the following, we assume that the repository has been closed into `/tmp/neural_persistence_dynamics`.
-
-### Setup a new Anaconda environment
-
-```bash
-conda create -n "pytorch23" python=3.10
-conda activate pytorch23
-```
-
-### Install ```pytorch```
-
-```bash
-conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
-python -c 'import torch' # check
-```
-
-### Installing `torchph`
-
-```bash
-cd /tmp/neural_persistence_dynamics
-mkdir 3rdparty
-cd 3rdparty
-git clone https://github.com/c-hofer/torchph.git 
-conda develop torchph
-python -c 'import torchph' # check
-```
-
-### Installing `torchdiffeq`
-
-```bash
-pip3 install torchdiffeq
-python -c 'import torchdiffeq' # check
-```
-
-### Installing `ripser-plusplus`
-
-```bash
-pip3 install git+https://github.com/simonzhang00/ripser-plusplus.git
-```
-
-### Installing other required packages
-
-```bash
-pip install tensorboard, halo, einops, h5py
-```
-
-### Setup folder structure
-
-```bash
-cd /tmp/neural_persistence_dynamics
-mkdir -p data # stores all data
-mkdir -p logs # stores all logs
-mkdir -p runs # stores all tensorboard related stuff
-```
-
-
-## Replicating experiments
-
-### Downloading precomputed simulation data
-
-```bash
-cd /tmp/neural_persistence_dynamics
-mkdir -p data/Giusti23a/1k
-python download.py --dataset dorsogna-1k --destination data/Giusti23a/1k
-```
-
-### Computing Vietoris-Rips persistence diagrams 
-
-
-```bash
- python compute_pds.py \
-    --simu-inp-file data/Giusti23a/1k/simu_1k.pt \
-    --prms-inp-file data/Giusti23a/1k/prms_1k.pt \
-    --dgms-out-file data/Giusti23a/1k/dgms_1k_vr_h0h1.pt \
-    --compute-ph
-```
-This will compute all Vietoris-Rips persistence diagrams for $H_0$ and $H_1$ 
-(by default; in case you also want $H_2$ add `--max-dim 2` on the command line)
-and save them to `data/Giusti23a/1k/dgms_1k_vr_h0h1.pt`.
-
-### Computing vectorizations
-
-Next, we can compute the vectorizations:
-
-```python
-python compute_vec.py \
-    --dgms-inp-file data/Giusti23a/1k/dgms_1k_vr_h0h1.pt \
-    --vecs-out-base data/Giusti23a/1k/vecs \ 
-    --num-elements 20 \
-    --nu 0.005 \
-    --subsample 50000
-```
-
-The `dorsogna-1k` dataset contains 1,000 simulations with 100 time points. Hence, we 
-have a total of 100,000 available persistence diagrams per dimension. In this example,
-we subsample 50,000 to parametrize the vectorization, meaning 50,000 diagrams are 
-used to compute the centers of 20 exponential structure elements. Overall, this 
-yields 20-dimensional vectorizations per diagram and dimension. The output files 
-are named as follows: 
-
-### Training / Evaluation
-
-We are now ready to train and evaluate the continuous latent variable model using 
-`dynamics.py`. 
-
 
 ## Precomputed simulation data
 

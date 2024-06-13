@@ -5,6 +5,7 @@ szeng, fgraf, rkwitt, muray, shuber, 2024
 
 import os
 import sys
+import random
 
 import argparse
 from rich.markdown import Markdown
@@ -51,6 +52,12 @@ from core import (
 	normal_kl)
 
 from sklearn.metrics import r2_score, mean_squared_error
+
+
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
 
 # region cmdline parsing
 def setup_cmdline_parsing():
@@ -198,7 +205,7 @@ def setup_cmdline_parsing():
     if "z_signature" in sys.argv:
         group2.add_argument(
 			"--sig-depth",
-   			metavar="INT", 
+            metavar="INT", 
 			type=int, 
 			default=3, 
 			help="Path signature depth (default: %(default)s)"
@@ -435,10 +442,21 @@ def main():
 	spinner.succeed()
 	
 	# make sure splits are the same for a given seed
-	generator = torch.Generator().manual_seed(args.seed) 
-	trn_set, tst_set = torch.utils.data.random_split(ds, [0.8, 0.2], generator=generator)
-	dl_trn = DataLoader(trn_set, batch_size=args.batch_size, shuffle=True, collate_fn=ds.get_collate())
-	dl_tst = DataLoader(tst_set, batch_size=args.batch_size, shuffle=False, collate_fn=ds.get_collate())
+	split_generator = torch.Generator().manual_seed(args.seed) 
+	trn_set, tst_set = torch.utils.data.random_split(ds, [0.8, 0.2], generator=split_generator)
+
+	loader_generator = torch.Generator().manual_seed(args.seed)
+	dl_trn = DataLoader(trn_set, 
+						batch_size=args.batch_size, 
+						shuffle=True, 
+						num_workers=4,
+						collate_fn=ds.get_collate(),
+						worker_init_fn=seed_worker,
+						generator=loader_generator)
+	dl_tst = DataLoader(tst_set, 
+						batch_size=args.batch_size, 
+						shuffle=False, 
+						collate_fn=ds.get_collate())
 
 	recog_backbone = create_recog_backbone(args) 
 	recon_backbone = create_recon_backbone(args) 

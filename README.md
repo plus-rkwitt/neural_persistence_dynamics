@@ -38,7 +38,7 @@ mkdir -p 3rdparty # 3rdparty code
 mkdir -p runs # stores all tensorboard related stuff
 ```
 
-### Install ```pytorch```
+### Installing ```pytorch```
 ```bash
 conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
 python -c 'import torch' # check
@@ -141,7 +141,7 @@ python dynamics.py \
     --tps-frac 0.5 \
     --weight-decay 1e-3 \
     --run-dir runs/ \
-    --log-out-file /logs/logfile.pt \
+    --log-out-file logs/logfile.pt \
     --backbone topdyn_only \
     --processor z_mtantwins \
     --mtan-h-dim 64 \
@@ -158,6 +158,9 @@ regression objective, respectively.
 **Note**: we normalize simulation parameter ranges to 
 [-1,1] for training *only*, but evaluate on the actual
 range for R2 and SMAPE computation later. 
+
+**Note**: Overall, the run in the above mentioned configuration should yield an average
+testing R2 score of approx. 0.845.
 
 ### Monitoring progress
 

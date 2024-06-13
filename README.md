@@ -130,7 +130,7 @@ We are now ready to train and evaluate the continuous latent variable model usin
 python dynamics.py \
     --vec-inp-file data/Giusti23a/1k/vecs_20_0.005.pt \
     --aux-inp-file data/Giusti23a/1k/prms_1k_norm.pt \
-    --batch-size 64
+    --batch-size 64 \
     --lr 0.001 \
     --n-epochs 210 \
     --kl-weight 0.001 \

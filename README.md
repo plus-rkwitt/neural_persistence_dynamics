@@ -200,3 +200,7 @@ paper, i.e., `dorsogna-1k`, `dorsogna-10k`, `volex-10k` and
 ## Running your own simulations
 
 To run your own simulations, you also need to install the `sysiphe` package.
+
+## Test system
+
+Ubuntu 22.04, running kernel 5.15.0-112-generic, CUDA 11.8 (NVIDIA driver 555.42.02, 2x GeForce RTX 3090) and PyTorch 2.3. 

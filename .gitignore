@@ -3,3 +3,4 @@ logs
 runs
 __pycache__
 3rdparty
+*.ipynb_checkpoints/

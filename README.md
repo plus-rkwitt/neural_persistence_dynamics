@@ -230,6 +230,23 @@ to generate the `dorsogna-10k` data.
 
 ### `volex-10k`
 
+Use `generate_volumeexclusion.py` for this dataset. In particular, we used 
+
+```bash
+cd /tmp/neural_persistence_dynamics
+cd simulations
+python generate_volumeexclusion.py \
+    --device cuda:0 \
+    --freq 10 \
+    --points 50 \
+    --dim 3 \
+    --root ../data/volume_exclusion \
+    --steps 1000 \
+    --simulations 10000
+```
+to generate the `volex-10k` data. 
+
+
 ### `vicsek-10k`
 
 

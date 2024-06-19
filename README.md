@@ -206,12 +206,15 @@ pip3 install sisyphe
 python -c 'import torchdiffeq' # check
 ```
 
-Simulation code for (almost) all simulations can be found under `simulations`.
+Simulation code for (almost) all simulations can be found under `simulations`. 
+Currently, the variations in the simulation model parameters are fixed (according 
+to the paper), but are easy to modify if required.
+
 
 ### `dorsogna-1k`
 
 To simulate the `dorsogna-1k` data, we used the original simulation code provided
-[here]().
+[here](https://github.com/ldarrick/paths-of-persistence-diagrams).
 
 ### `dorsogna-10k`
 
@@ -255,10 +258,17 @@ to generate the `volex-10k` data.
 Use `generate_vicsek.py` for this dataset. In particular, we used 
 
 ```bash
+python generate_vicsek.py \
+    --device cuda:0 \
+    --freq 10 \
+    --points 200 \
+    --dim 3 \
+    --root ../data/vicsek \
+    --steps 1000 \
+    --simulations 10000
 ```
 
 to generate the `vicsek-10k` data.
-
 
 ## Test system
 

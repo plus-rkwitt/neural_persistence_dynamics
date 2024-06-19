@@ -199,8 +199,44 @@ paper, i.e., `dorsogna-1k`, `dorsogna-10k`, `volex-10k` and
 
 ## Running your own simulations
 
-To run your own simulations, you also need to install the `sysiphe` package.
+To run your own simulations, you also need to install the `sysiphe` package via
+
+```bash
+pip3 install sisyphe
+python -c 'import torchdiffeq' # check
+```
+
+Simulation code for (almost) all simulations can be found under `simulations`.
+
+### `dorsogna-1k`
+
+### `dorsogna-10k`
+
+Use `generate_attractionrepulsion.py` for this dataset. In particular, we used 
+
+```bash
+cd /tmp/neural_persistence_dynamics
+cd simulations
+python generate_attractionrepulsion.py \
+    --device cuda:0 \
+    --freq 10 \
+    --points 200 \
+    --dim 3 \
+    --root ../data/attraction_repulsion \
+    --steps 1000 \
+    --simulations 10000
+```
+to generate the `dorsogna-10k` data. 
+
+### `volex-10k`
+
+### `vicsek-10k`
+
 
 ## Test system
 
 Ubuntu 22.04, running kernel 5.15.0-112-generic, CUDA 11.8 (NVIDIA driver 555.42.02, 2x GeForce RTX 3090) and PyTorch 2.3. 
+
+## Notebooks
+
+Notebooks can be found under `notebooks`.

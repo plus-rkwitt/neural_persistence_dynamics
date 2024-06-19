@@ -76,7 +76,8 @@ def setup_cmdline_parsing():
 def compute_SLayerExponential_parameters(
     dgms: dict[int, list[list]], 
     num_elements:int=20, 
-    num_subsample:int=50000): 
+    num_subsample:int=50000,
+    return_points=False): 
     """Compute initializations for exponential structure element following [Section 2, Royer19a]
     
     [Royer19a]
@@ -127,12 +128,15 @@ def compute_SLayerExponential_parameters(
     km = KMeans(n_clusters=num_elements, init='k-means++')
     X = torch.cat(T)
     km.fit(X)
-
+    
     ci = torch.tensor(km.cluster_centers_, dtype=torch.float32)
     neigh = NearestNeighbors(n_neighbors=1)
     neigh.fit(ci)
     dists,_ = neigh.kneighbors(ci, 2, return_distance=True)
     si = torch.tensor(dists[:,-1]/2.0, dtype=torch.float32).view(num_elements,1).repeat(1,2)   
+    
+    if return_points:
+        return ci, si, X
     return ci, si
 
 

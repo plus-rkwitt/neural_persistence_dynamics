@@ -210,6 +210,9 @@ Simulation code for (almost) all simulations can be found under `simulations`.
 
 ### `dorsogna-1k`
 
+To simulate the `dorsogna-1k` data, we used the original simulation code provided
+[here]().
+
 ### `dorsogna-10k`
 
 Use `generate_attractionrepulsion.py` for this dataset. In particular, we used 
@@ -248,6 +251,13 @@ to generate the `volex-10k` data.
 
 
 ### `vicsek-10k`
+
+Use `generate_vicsek.py` for this dataset. In particular, we used 
+
+```bash
+```
+
+to generate the `vicsek-10k` data.
 
 
 ## Test system

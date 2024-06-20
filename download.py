@@ -8,9 +8,15 @@ DOWNLOAD_LINKS = {
         'prms_1k.pt': '17lKLfqxp7gjkJJR9YSNeDKeiat6FNPxN',
         'prms_1k_norm.pt': '1ZiMM2ALYkM7DnXaTHWyr3qUjcQrzMj8O',
         'dgms_1k_vr_h0h1.pt': '15J3XbWjbG3WZQgH-2UbxjUTKl5rDpLmx',
-        'vecs_20_0.005.pt': '1QKzw1TjWlJ3sjX1Iy7akcF5iwxAleR3n'
-        }
+        'vecs_20_0.005.pt': '1QKzw1TjWlJ3sjX1Iy7akcF5iwxAleR3n',
+        'dgms_1k_vr_h0h1.pt': '15J3XbWjbG3WZQgH-2UbxjUTKl5rDpLmx'
     }
+    'volex-10k': {
+        'simu_10k.pt': 
+            
+    }
+}
+
 
 def setup_cmdline_parsing():
     generic_parser = argparse.ArgumentParser()

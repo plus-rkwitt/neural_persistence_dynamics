@@ -33,13 +33,13 @@ from einops import reduce
 from torchdiffeq import odeint
 
 # imports for data loading and model components
-from datasource import (
+from npd.data.core import (
     PHDataset, 
     PointCloudDataset, 
     JointDataset, 
     create_sampling_indices)
 
-from core import (
+from npd.nn.core import (
 	SignatureHead,
 	MTANHead,
 	LatentStateHead,

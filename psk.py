@@ -158,20 +158,23 @@ def main():
     args = parser.parse_args()
     print(args)
     
+    assert os.path.exists(args.prms_inp_file), f"File {args.prms_inp_file} not found!"
+    assert os.path.exists(args.vecs_inp_file), f"File {args.vecs_inp_file} not found!"
+    
     prms = torch.load(args.prms_inp_file)
     vecs = torch.load(args.vecs_inp_file)
     prms_ids = list(range(prms.shape[1])) # determine nr. of parameters
     
     vecs = vecs.permute(0,2,1)
     N,D,T = vecs.shape
-    print(f'{N} time series of dim {D} with {T} timepoints!')
+    print(f'{N} time series of dim {D} with {T} timepoints and {len(prms_ids)} aux. variables!')
     
     data = vecs.permute(0,2,1).view(-1,T)
     scaler = MinMaxScaler()
     scaler.fit(data)
     vecs = torch.tensor(scaler.transform(data)).view(N,T,D)
     
-    lags = [0,1,2] # used ion [Giusti23a]
+    lags = [0,1,2] # 3 lags used ion [Giusti23a]
     lagged_vecs = lag_transform(vecs)
 
     K_ss = defaultdict(list)

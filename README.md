@@ -19,6 +19,7 @@ If you use the code please cite as:
 - [Setup](#setup)
 - [Replicating experiments (with precomputed simulations)](#replicating-experiments)
 - [Running your own simulations](#running-your-own-simulations)
+- [Notebooks](#notebooks)
 
 ## Setup
 In the following, we assume that the repository has been cloned into `/tmp/neural_persistence_dynamics`.

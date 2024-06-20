@@ -764,3 +764,119 @@ class MTANEncoder(EncMtanRnn):
         _, out = self.gru_rnn(out)
         return out.squeeze(0)
 # endregion
+
+
+# region Baseline backbones
+class TDABaselineBackbone(nn.Module):
+    def __init__(self, args):
+        super(TDABaselineBackbone, self).__init__()
+        self.num_timepts = args.num_timepts    
+        self.recog_net = VecRecogNetBaseline(
+            mtan_input_dim=args.vec_inp_dim, 
+            mtan_hidden_dim=args.mtan_h_dim, 
+            mtan_embed_time=args.mtan_embed_time,
+            mtan_num_queries=args.mtan_num_queries,
+            use_atanh=False)
+    
+    def forward(self, batch, device):
+        parts = {key: val.to(device) for key, val in batch.items()}
+        parts_inp_obs = parts['inp_obs']
+        parts_inp_msk = parts['inp_msk']
+        parts_inp_tps = parts['inp_tps']  
+        inp = (parts_inp_obs, parts_inp_msk, parts_inp_tps)
+        return self.recog_net(inp), parts['evd_obs'], parts['evd_msk'], parts['aux_obs']
+
+
+class PointNetBaselineBackbone(nn.Module):
+    def __init__(self, args):
+        super(PointNetBaselineBackbone, self).__init__()
+        self.num_timepts = args.num_timepts
+        self.point_net = PointNet(h_dim=args.pointnet_dim)
+        self.recog_net = VecRecogNetBaseline(
+            mtan_input_dim=args.pointnet_dim, 
+            mtan_hidden_dim=args.mtan_h_dim, 
+            use_atanh=False)
+
+    def forward(self, batch, device):
+        pts_msk_batch = batch['pts_msk_batch'].to(device)
+        pts_tid_batch = batch['pts_tid_batch'].to(device)  
+        pts_aux_batch = batch['pts_aux_batch'].to(device)
+        pts_cut_batch = batch['pts_cut_batch']
+        
+        pts_obs_batch = batch['pts_obs_batch']     
+        pts_obs_batch = Batch.from_data_list(pts_obs_batch)
+        pts_obs_batch = pts_obs_batch.to(device)
+    
+        enc = self.point_net(pts_obs_batch.pos, pts_obs_batch.edge_index, pts_obs_batch.batch)
+        enc = enc.tensor_split(pts_cut_batch, dim=0)
+        enc = torch.stack(enc) 
+        
+        N,T,D = enc.shape
+        parts_inp_obs = torch.zeros(N,self.num_timepts,D,device=device)
+        parts_inp_msk = torch.zeros(N,self.num_timepts,D,device=device)
+        parts_inp_tps = torch.zeros(N,self.num_timepts,device=device)
+        parts_inp_obs[:,:T] = enc
+        parts_inp_tps[:,:T] = pts_tid_batch/self.num_timepts
+        parts_inp_msk[:,:T] = 1
+        inp = (parts_inp_obs, parts_inp_msk, parts_inp_tps)
+        
+        pts_tid_batch = pts_tid_batch.view(pts_tid_batch.shape + torch.Size([1])).expand_as(enc)
+        evd_obs = torch.zeros(N,self.num_timepts,D,device=device)
+        evd_obs.scatter_(1,pts_tid_batch,enc)
+        evd_msk = pts_msk_batch.expand(N,self.num_timepts,D)
+    
+        return self.recog_net(inp), evd_obs, evd_msk, pts_aux_batch
+
+
+class JointBaselineBackbone(nn.Module):
+    def __init__(self, args):
+        super(JointBaselineBackbone, self).__init__()
+        self.num_timepts = args.num_timepts    
+        self.point_net = PointNet(h_dim=args.pointnet_dim)
+        self.recog_net = VecRecogNetBaseline(
+            mtan_input_dim=args.vec_inp_dim + args.pointnet_dim, 
+            mtan_hidden_dim=args.mtan_h_dim, 
+            use_atanh=False)
+    
+    def forward(self, batch, device):
+        batch_tda = batch['tda_obs_batch']        
+        parts = {key: val.to(device) for key, val in batch_tda.items()}
+        parts_inp_obs = parts['inp_obs']
+        parts_inp_msk = parts['inp_msk']
+        parts_inp_tps = parts['inp_tps']    
+        
+        pts_aux_batch = batch['pts_aux_batch'].to(device)  
+        pts_tid_batch = batch['pts_tid_batch'].to(device)  
+        pts_cut_batch = batch['pts_cut_batch']          
+        pts_obs_batch = batch['pts_obs_batch']     
+        pts_obs_batch = Batch.from_data_list(pts_obs_batch)
+        pts_obs_batch = pts_obs_batch.to(device)
+    
+        enc = self.point_net(pts_obs_batch.pos, pts_obs_batch.edge_index, pts_obs_batch.batch)
+        enc = enc.tensor_split(pts_cut_batch, dim=0)
+        enc = torch.stack(enc) 
+        
+        N,T,D = enc.shape
+        enc_ext = torch.zeros(N,self.num_timepts,D,device=device)
+        enc_ext[:,:T] = enc
+        
+        parts_inp_obs = torch.cat((parts_inp_obs, enc_ext), dim=2)  # N,T,D
+        parts_inp_msk = parts_inp_msk[:,:,0].view(
+            parts_inp_obs.shape[0],
+            parts_inp_obs.shape[1],1).expand(
+                parts_inp_obs.shape[0],
+                parts_inp_obs.shape[1],
+                parts_inp_obs.shape[2])
+                
+        pts_tid_batch = pts_tid_batch.view(pts_tid_batch.shape + torch.Size([1])).expand_as(enc)
+        evd_obs = torch.zeros(N,self.num_timepts,D,device=device)
+        evd_obs.scatter_(1,pts_tid_batch,enc)
+        evd_obs = torch.cat((evd_obs, parts['evd_obs']),dim=2)
+        evd_msk = parts['evd_msk'][:,:,0].view(evd_obs.shape[0],evd_obs.shape[1],1).expand(
+            evd_obs.shape[0],
+            evd_obs.shape[1],
+            evd_obs.shape[2])
+        
+        inp = (parts_inp_obs, parts_inp_msk, parts_inp_tps)
+        return self.recog_net(inp), evd_obs, evd_msk, pts_aux_batch
+# endregion

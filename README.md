@@ -49,7 +49,7 @@ python -c 'import torch' # check
 cd /tmp/neural_persistence_dynamics
 cd 3rdparty
 git clone https://github.com/c-hofer/torchph.git 
-conda develop torchph
+pip install -e .
 python -c 'import torchph' # check
 ```
 

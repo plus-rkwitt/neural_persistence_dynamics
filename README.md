@@ -105,7 +105,7 @@ Diagrams are saved to `data/Giusti23a/1k/dgms_1k_vr_h0h1.pt`.
 ### Computing vectorizations
 
 Next, we can compute the vectorizations:
-```python
+```bash
 python compute_vec.py \
     --dgms-inp-file data/Giusti23a/1k/dgms_1k_vr_h0h1.pt \
     --vecs-out-base data/Giusti23a/1k/vecs \ 

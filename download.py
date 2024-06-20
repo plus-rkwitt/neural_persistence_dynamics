@@ -10,10 +10,12 @@ DOWNLOAD_LINKS = {
         'dgms_1k_vr_h0h1.pt': '15J3XbWjbG3WZQgH-2UbxjUTKl5rDpLmx',
         'vecs_20_0.005.pt': '1QKzw1TjWlJ3sjX1Iy7akcF5iwxAleR3n',
         'dgms_1k_vr_h0h1.pt': '15J3XbWjbG3WZQgH-2UbxjUTKl5rDpLmx'
-    }
+    },
     'volex-10k': {
-        'simu_10k.pt': 
-            
+        'simu_10k.pt': '1pevrjzcL1lLDeDgFh1uNOXlW1V-Qb6fo',
+        'prms_1k.pt': '1crOSVmiMkoHyWrHH7RqIjITUN1q506s_',
+        'prms_1k_norm.pt': '1kFR54X-8IP-Ca2ljd0oCyx7MfvSWi1p2',
+        'dgms_1k_vr_h0h1.pt': '1OKfdKVrmzAGcMacycuBpfcHriiEoeVRo',         
     }
 }
 

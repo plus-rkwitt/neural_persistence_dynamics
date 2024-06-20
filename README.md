@@ -275,6 +275,10 @@ to generate the `vicsek-10k` data.
 
 Ubuntu 22.04, running kernel 5.15.0-112-generic, CUDA 11.8 (NVIDIA driver 555.42.02, 2x GeForce RTX 3090) and PyTorch 2.3. 
 
+## Comparisons & Baseline
+
+tbd.
+
 ## Notebooks
 
 Notebooks can be found under `notebooks`.

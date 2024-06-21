@@ -177,16 +177,26 @@ tensorboard --logdir=runs --port <PORT>
 
 The console output currently only provide information 
 about the overall (extended) ELBO, the training/testing 
-MSE (averaged over all parametes) and the training/testing 
+MSE (averaged over all parameters) and the training/testing 
 R2 score (averaged over all parameters). 
+
+To compute other scores, it is more convenient to use the logged
+predictions throughout training (or, alternatively, load the model
+as in `ModelLoading.ipynb` and run the testing data through the 
+model) and use the `Evaluation.ipynb` notebook.
 
 
 ### Saving / Loading models
 
+When running `dynamics.py` you can specify the `--net-out-file FILE` 
+parameter in which case the trained model will be saved as `FILE` for 
+later use. To load the model, see `ModelLoading.ipynb` in the `notebooks`
+subfolder for an example use case.
+
 ## Precomputed simulation data
 
-We provide precomputed simulations and persistence 
-diagrams. They can be downloaded as follows:
+We provide precomputed simulations, persistence 
+diagrams and vectorizations. They can be downloaded as follows:
 
 ```bash
 cd /tmp/neural_persistence_dynamics
@@ -197,6 +207,8 @@ python download.py --dataset <DATASETNAME> --destination data/OUTFOLDER
 `DATASETNAME` is the name of the dataset as referenced in the 
 paper, i.e., `dorsogna-1k`, `dorsogna-10k`, `volex-10k` and
 `vicsek-10k`.
+
+**Note**: Destination folders will be created if they do not exist already.
 
 ## Running your own simulations
 
@@ -277,8 +289,15 @@ Ubuntu 22.04, running kernel 5.15.0-112-generic, CUDA 11.8 (NVIDIA driver 555.42
 
 ## Comparisons & Baseline
 
-tbd.
+### Path Signature Kernel (PSK)
+
+The path signature kernel (PSK) approach is implemented in `psk.py`. For the `dorsogna-1k` data, for example, 
+
+
+### Crocker Stacks
+
+### Baseline model
 
 ## Notebooks
 
-Notebooks can be found under `notebooks`.
+Several notebooks on loading and evaluating models can be found under `notebooks`.

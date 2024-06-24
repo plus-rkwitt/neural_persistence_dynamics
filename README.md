@@ -72,6 +72,7 @@ pip3 install git+https://github.com/simonzhang00/ripser-plusplus.git
 cd /tmp/neural_persistence_dynamics
 cd 3rdparty
 git clone https://github.com/patrick-kidger/signatory.git
+cd signatory
 python setup.py install 
 python -c 'import signatory' # check
 ```

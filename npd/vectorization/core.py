@@ -13,10 +13,10 @@ from sklearn.cluster import KMeans
 
 
 def compute_SLayerExponential_parameters(
-    dgms: dict[int, list[list]], 
-    num_elements:int=20, 
-    num_subsample:int=50000,
-    return_points=False): 
+        dgms: dict[int, list[list]],
+        num_elements: int = 20,
+        num_subsample: int = 50000,
+        return_points: bool = False):
     """Compute initializations for exponential structure element following 
     [Section 2, Royer19a]
     
@@ -56,11 +56,11 @@ def compute_SLayerExponential_parameters(
     
     # collect all PDs and transform PDs to (birth,persistence) coordinates
     T = list(chain.from_iterable(dgms))
-    for k,t in enumerate(T):
+    for k, t in enumerate(T):
         if t.size == 0:
-            T[k] = np.zeros((1,2), dtype=np.float32)
+            T[k] = np.zeros((1, 2), dtype=np.float32)
         else:
-            t[:,1] = t[:,1]-t[:,0]
+            t[:, 1] = t[:, 1]-t[:, 0]
 
     # draw random sample from all PDs (of size num_subsample)
     selection = torch.randperm(len(T))[0:num_subsample]
@@ -74,8 +74,8 @@ def compute_SLayerExponential_parameters(
     ci = torch.tensor(km.cluster_centers_, dtype=torch.float32)
     neigh = NearestNeighbors(n_neighbors=1)
     neigh.fit(ci)
-    dists,_ = neigh.kneighbors(ci, 2, return_distance=True)
-    si = torch.tensor(dists[:,-1]/2.0, dtype=torch.float32).view(num_elements,1).repeat(1,2)   
+    dists, _ = neigh.kneighbors(ci, 2, return_distance=True)
+    si = torch.tensor(dists[:, -1]/2.0, dtype=torch.float32).view(num_elements, 1).repeat(1, 2)
     
     if return_points:
         return ci, si, X
@@ -83,10 +83,10 @@ def compute_SLayerExponential_parameters(
 
 
 def compute_SLayerExponential_vectorization(
-        dgms: dict[int, list[list]], 
-        ci:torch.Tensor, 
-        si:torch.Tensor, 
-        nu:float=0.005):
+        dgms: dict[int, list[list]],
+        ci: torch.Tensor,
+        si: torch.Tensor,
+        nu: float = 0.005):
     """
     Parameters:
     -----------
@@ -94,11 +94,11 @@ def compute_SLayerExponential_vectorization(
             Dictionary of persistence diagrams for each dimension
             
             Each value is a list (of length M) of lists of persistence diagrams 
-            (of length T), where M denotes the number of simulations and T denotes
-            the number of persistence diagrams per simulation.
+            (of length T), where M denotes the number of simulations and T
+            denotes the number of persistence diagrams per simulation.
         ci: torch.Tensor    
-            Centers of the exponential structure elements, i.e., a tensor of shape
-            (num_elements, 2)
+            Centers of the exponential structure elements, i.e., a tensor of
+            shape (num_elements, 2)
         si: torch.Tensor
             Scaling factors for exponential structure elements, i.e., a tensor
             of shape (num_elements, 1)            
@@ -108,9 +108,9 @@ def compute_SLayerExponential_vectorization(
     Returns:
     --------
         vecs: torch.Tensor
-            Vectorized persistence diagrams, i.e., tensor of shape (M, T, num_elements)
-            where M denotes the number of simulations and T denotes the number of 
-            persistence diagrams per simulation.
+            Vectorized persistence diagrams, i.e., tensor of shape
+            (M, T, num_elements) where M denotes the number of simulations
+            and T denotes the number of persistence diagrams per simulation.
     """
     
     num_elements = ci.shape[0]
@@ -129,4 +129,4 @@ def compute_SLayerExponential_vectorization(
             vecs.append(out.detach().unsqueeze(0))
     vecs = torch.cat(vecs)
 
-    return vecs   
+    return vecs

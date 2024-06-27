@@ -289,12 +289,11 @@ def run_epoch(
         z0 = epsilon * torch.exp(.5 * qz0_logvar) + qz0_mean
 
         # (3) integrate latent ODE forward to time points in t
-        zs = odeint(modules['lnode_net'], z0, t, method="euler").permute(1, 0,
-                                                                         2)
+        zs = odeint(modules['lnode_net'], z0, t, method="euler").permute(1, 0, 2)
 
         # (4) run through reconstruction network and parametrize p(x|z),
-		# then comp. log-likelihood
-		rec = modules['recon_net'](zs)
+        # then comp. log-likelihood
+        rec = modules['recon_net'](zs)
         pxz = modules['ptogd_net'](rec.unsqueeze(0))
         log_pxz = -pxz.log_prob(evd_obs.unsqueeze(0))
         log_pxz[evd_msk.unsqueeze(0) == 0] = 0

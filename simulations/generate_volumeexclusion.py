@@ -1,6 +1,5 @@
 """Code to generate the Volume-Exclusion data."""
 
-
 import os
 import sys
 import json
@@ -93,7 +92,7 @@ class VolumeExclusionSimulator:
         box_size: float = 1.,
         dt: float = 0.01,
         n_max: int = 2000
-        ) -> None:
+    ) -> None:
         self.num_points = num_points
         self.steps = steps
         self.freq = freq
@@ -107,13 +106,13 @@ class VolumeExclusionSimulator:
         }
 
     def simulate(self, rad, alpha, division_rate, death_rate):
-        pos = (torch.rand((self.num_points,self.dim), device=self.device) - 0.5)
+        pos = (torch.rand((self.num_points, self.dim), device=self.device) - 0.5)
         params = {
             'pos': pos,
             'interaction_radius': rad,
             'alpha': alpha,
-            'division_rate' : division_rate,
-            'death_rate' : death_rate,
+            'division_rate': division_rate,
+            'death_rate': death_rate,
             **self.fixed_params
         }
         
@@ -123,18 +122,21 @@ class VolumeExclusionSimulator:
         for step, i in zip(simu, range(self.steps)):
             if step['position'].shape[0]>self.n_max:
                 return
-            if i%10 == 0:
+            if i % 10 == 0:
                 positions.append(step['position'])
         return positions
     
 
 def generate_param():
     birth, death = 0., 1.
-    while death>birth:
-        rad = torch.Tensor(1).uniform_(0,2).item()
-        alpha = torch.Tensor(1).uniform_(0,2).item()
-        birth = torch.Tensor(1).uniform_(0,1).item()
-        death = torch.Tensor(1).uniform_(0,1).item()
+    rad, alpha = 0., 0.
+
+    while death > birth:
+        rad = torch.Tensor(1).uniform_(0, 2).item()
+        alpha = torch.Tensor(1).uniform_(0, 2).item()
+        birth = torch.Tensor(1).uniform_(0, 1).item()
+        death = torch.Tensor(1).uniform_(0, 1).item()
+
     return rad, alpha, birth, death
     
 
@@ -147,9 +149,9 @@ def main():
         dim=args.dim, 
         device=args.device)
 
-    dir = os.path.join(args.root, f"id_{args.id}")
-    if not os.path.isdir(dir): 
-        os.makedirs(dir)
+    directory_ = os.path.join(args.root, f"id_{args.id}")
+    if not os.path.isdir(directory_):
+        os.makedirs(directory_)
     
     pbar = ProgressBar(args.simulations)
     positions, velocities, params = [], [], []
@@ -165,11 +167,12 @@ def main():
             pbar.update()
     print("\n", m, "/", n)
         
-    with open (f'{dir}setup.json', 'w') as f:
+    with open(f'{directory_}setup.json', 'w') as f:
         json.dump(simulator.__dict__, f, ensure_ascii=True, indent=4)
-    torch.save(params, os.path.join(dir, 'target.pt'))
-    torch.save(positions, os.path.join(dir, 'positions.pt'))
-    torch.save(velocities, os.path.join(dir, 'velocities.pt'))
+    torch.save(params, os.path.join(directory_, 'target.pt'))
+    torch.save(positions, os.path.join(directory_, 'positions.pt'))
+    torch.save(velocities, os.path.join(directory_, 'velocities.pt'))
+
 
 if __name__ == "__main__":
     main()

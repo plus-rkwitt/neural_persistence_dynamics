@@ -97,7 +97,7 @@ class AttractionRepulsionSimulator:
         dt: float = 0.01,
         isaverage: bool = False,
         p: int = 1,
-        ) -> None:
+    ) -> None:
         self.num_points = num_points
         self.steps = steps
         self.freq = freq
@@ -105,9 +105,9 @@ class AttractionRepulsionSimulator:
         self.device = device
 
         self.fixed_params = {
-            'friction' : friction,
-            'Ca' : Ca,
-            'la' : la,
+            'friction': friction,
+            'Ca': Ca,
+            'la': la,
             'box_size': box_size,
             'dt': dt,
             'isaverage': isaverage,
@@ -115,8 +115,8 @@ class AttractionRepulsionSimulator:
         }
 
     def simulate(self, rad, propulsion, Cr, lr):
-        pos = (torch.rand((self.num_points,self.dim), device=self.device) - 0.5)
-        vel = torch.randn(self.num_points,self.dim, device=self.device)
+        pos = (torch.rand((self.num_points, self.dim), device=self.device) - 0.5)
+        vel = torch.randn(self.num_points, self.dim, device=self.device)
         vel = vel/torch.norm(vel, dim=1, keepdim=True)
 
         params = {
@@ -124,13 +124,13 @@ class AttractionRepulsionSimulator:
             'interaction_radius': rad,
             'vel': vel,
             'propulsion': propulsion,        
-            'Cr' : Cr,
+            'Cr': Cr,
             'lr': lr,
             **self.fixed_params
         } 
         
         simu = AttractionRepulsion(**params)
-        pos_vel = torch.stack([torch.stack((step['position'], step['velocity'])).cpu() for step, i in zip(simu, range(self.steps)) if i%self.freq == 0], dim=1)
+        pos_vel = torch.stack([torch.stack((step['position'], step['velocity'])).cpu() for step, i in zip(simu, range(self.steps)) if i % self.freq == 0], dim=1)
         return pos_vel
 
 
@@ -144,29 +144,30 @@ def main():
         dim=args.dim, 
         device=args.device)
     
-    rad = torch.tensor(2.).pow(torch.Tensor(args.simulations).uniform_(-2/3,2/3))
-    prop = torch.tensor(2.).pow(torch.Tensor(args.simulations).uniform_(-2,2))
-    Cr = torch.tensor(2.).pow(torch.Tensor(args.simulations).uniform_(-1,1))
-    lr = torch.tensor(2.).pow(torch.Tensor(args.simulations).uniform_(-1.5,0.5))
-    params = torch.stack([rad,prop, Cr, lr], dim=1)
+    rad = torch.tensor(2.).pow(torch.Tensor(args.simulations).uniform_(-2/3, 2/3))
+    prop = torch.tensor(2.).pow(torch.Tensor(args.simulations).uniform_(-2, 2))
+    Cr = torch.tensor(2.).pow(torch.Tensor(args.simulations).uniform_(-1, 1))
+    lr = torch.tensor(2.).pow(torch.Tensor(args.simulations).uniform_(-1.5, 0.5))
+    params = torch.stack([rad, prop, Cr, lr], dim=1)
 
-    dir = os.path.join(args.root, f"id_{args.id}")
-    if not os.path.isdir(dir): 
-        os.makedirs(dir)
+    directory_ = os.path.join(args.root, f"id_{args.id}")
+    if not os.path.isdir(directory_):
+        os.makedirs(directory_)
 
     pbar = ProgressBar(args.simulations)
     positions, velocities = [], []
-    for r,p,c,l in params:        
+    for r, p, c, l in params:
         pos, vel = simulator.simulate(float(r), float(p), float(c), float(l))
         positions.append(pos)
         velocities.append(vel)
         pbar.update()
         
-    with open (f'{dir}setup.json', 'w') as f:
+    with open (f'{directory_}setup.json', 'w') as f:
         json.dump(simulator.__dict__, f, ensure_ascii=True, indent=4)
-    torch.save(params, os.path.join(dir, 'target.pt'))
-    torch.save(positions, os.path.join(dir, 'positions.pt'))
-    torch.save(velocities, os.path.join(dir, 'velocities.pt'))
+
+    torch.save(params, os.path.join(directory_, 'target.pt'))
+    torch.save(positions, os.path.join(directory_, 'positions.pt'))
+    torch.save(velocities, os.path.join(directory_, 'velocities.pt'))
 
 
 if __name__ == "__main__":

@@ -1,6 +1,5 @@
 """Code to generate the Volume-Exclusion data."""
 
-
 import os
 import sys
 import json
@@ -92,7 +91,7 @@ class VicsekSimulator:
         device: float = 'cuda:0',
         box_size: float = 20.,
         dt: float = 0.01,
-        ) -> None:
+    ) -> None:
         self.num_points = num_points
         self.steps = steps
         self.freq = freq
@@ -106,18 +105,18 @@ class VicsekSimulator:
             'dt': dt
         }
 
-    def simulate(self, rad, C, sigma, nu):
+    def simulate(self, rad, c, sigma, nu):
         pos = self.box_size*torch.rand(self.num_points, self.dim, device=self.device)
         vel = torch.randn(self.num_points, self.dim, device=self.device)
-        vel = vel/torch.norm(vel, dim=1).reshape((self.num_points,1))
+        vel = vel/torch.norm(vel, dim=1).reshape((self.num_points, 1))
     
         params = {
             'pos': pos,
             'vel': vel,
             'interaction_radius': rad,
             'sigma': sigma,
-            'nu' : nu,
-            'v' : C,
+            'nu': nu,
+            'v': c,
             **self.fixed_params
         }
         
@@ -125,17 +124,17 @@ class VicsekSimulator:
 
         positions = []
         for step, i in zip(simu, range(self.steps)):
-            if i%10 == 0:
+            if i % 10 == 0:
                 positions.append(step['position'])
         return positions
     
 
 def generate_param():
-    rad = torch.Tensor(1).uniform_(0.5,5.).item()
-    C = torch.Tensor(1).uniform_(0.5,5.).item()
-    sigma = torch.Tensor(1).uniform_(0.,2.0).item()
-    nu = torch.Tensor(1).uniform_(0.5,5.0).item()
-    return rad, C, sigma, nu
+    rad = torch.Tensor(1).uniform_(0.5, 5.).item()
+    c = torch.Tensor(1).uniform_(0.5, 5.).item()
+    sigma = torch.Tensor(1).uniform_(0., 2.0).item()
+    nu = torch.Tensor(1).uniform_(0.5, 5.0).item()
+    return rad, c, sigma, nu
 
 
 def main():
@@ -147,9 +146,9 @@ def main():
         dim=args.dim, 
         device=args.device)
 
-    dir = os.path.join(args.root, f"id_{args.id}")
-    if not os.path.isdir(dir): 
-        os.makedirs(dir)
+    directory_ = os.path.join(args.root, f"id_{args.id}")
+    if not os.path.isdir(directory_):
+        os.makedirs(directory_)
     
     pbar = ProgressBar(args.simulations)
     positions, velocities, params = [], [], []
@@ -165,11 +164,11 @@ def main():
             pbar.update()
     print("\n", m, "/", n)
         
-    with open (f'{dir}setup.json', 'w') as f:
+    with open(f'{directory_}setup.json', 'w') as f:
         json.dump(simulator.__dict__, f, ensure_ascii=True, indent=4)
-    torch.save(params, os.path.join(dir, 'target.pt'))
-    torch.save(positions, os.path.join(dir, 'positions.pt'))
-    torch.save(velocities, os.path.join(dir, 'velocities.pt'))
+    torch.save(params, os.path.join(directory_, 'target.pt'))
+    torch.save(positions, os.path.join(directory_, 'positions.pt'))
+    torch.save(velocities, os.path.join(directory_, 'velocities.pt'))
 
 
 if __name__ == "__main__":

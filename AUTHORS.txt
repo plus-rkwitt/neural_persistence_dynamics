@@ -1,5 +1,5 @@
 Sebastian Zeng, sebstian.zeng@plus.ac.at
 Florian Graf, florian.graf@plus.ac.at
 Roland Kwitt, roland.kwitt@plus.ac.at
-Martin Uray, martin.uray@stud.plus.ac.at
+Martin Uray, martin.uray@fh-salzburg.ac.at
 Stefan Huber, stefan.huber@fh-salzburg.ac.at

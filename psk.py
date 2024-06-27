@@ -68,30 +68,34 @@ def setup_cmdline_parsing():
     return generic_parser
 
 
-def lag_transform(X, lags=[0,1,2]):
+def lag_transform(X, lags=None):
     """Lag transform of the time series."""
+    if lags is None:
+        lags = [0, 1, 2]
+
     lagged_X = defaultdict()
-    N,T,D = X.shape
+    num_experiment, num_time_steps, dimension_time_series = X.shape
     for i in range(len(lags)):
-        Y = torch.zeros(N,T,D*(i+1))
-        for j,l in enumerate(lags[:i+1]):
-            Y[:,l:,j*D:(j+1)*D] = X[:,0:T-l,:]
+        Y = torch.zeros(num_experiment, num_time_steps, dimension_time_series * (i + 1))
+        for j, l in enumerate(lags[:i+1]):
+            Y[:, l:, j * dimension_time_series:(j + 1) * dimension_time_series] = X[:, 0:num_time_steps - l, :]
         lagged_X[lags[i]] = Y
     return lagged_X
 
 
 def time_subsample(vecs, sample_rate=0.2):
-    N,D,T = vecs.shape
-    num_keep = int(T*sample_rate)
-    vecs_ss = torch.zeros(N,D,num_keep)
+    num_experiments, num_diagrams, num_time_steps = vecs.shape
+    num_keep = int(num_time_steps*sample_rate)
+    vecs_ss = torch.zeros(num_experiments, num_diagrams, num_keep)
     for i in range(vecs.shape[0]):
-        vecs_ss[i] = vecs[i,:,torch.randperm(T)[0:num_keep]]
+        vecs_ss[i] = vecs[i, :, torch.randperm(num_time_steps)[0:num_keep]]
     return vecs_ss
 
 
-def run_regression(K, lags, vecs, y, C_s, e_s, n_splits=10, test_size=.20, id=0):
+def run_regression(K, lags, vecs, y, C_s, e_s, n_splits=10,
+                   test_size=.20, id_=0):
 
-    rmses, r2vals, smapes  = [], [], []
+    rmses, r2vals, smapes = [], [], []
     cv = ShuffleSplit(n_splits=n_splits, test_size=test_size)
     metric = RegressionMetric()
 
@@ -99,15 +103,19 @@ def run_regression(K, lags, vecs, y, C_s, e_s, n_splits=10, test_size=.20, id=0)
     for _, (trn_idx, tst_idx) in enumerate(cv.split(vecs)):
 
         best_score = 1e9
-        best_C, best_e, best_l = 0, 0, 0
+        best_c, best_e, best_l = 0, 0, 0
         svr = SVR(kernel='precomputed')
         
-        # cross-validation for hyperparameters (over lags and SVC hyperparameters)
-        for l in lags:
-            K_trn = K[l][trn_idx,:][:,trn_idx] # training portion of precomputed kernel matrix
-            K_tst = K[l][tst_idx,:][:,trn_idx] # testing portion of precomputed kernel matrix
-            y_trn = y[trn_idx,id]
-            y_tst = y[tst_idx,id]
+        # cross-validation for hyperparameters (over lags and SVC
+        # hyperparameters)
+        for lag_ in lags:
+            # training portion of precomputed kernel matrix
+            K_trn = K[lag_][trn_idx, :][:, trn_idx]
+            y_trn = y[trn_idx, id_]
+
+            # testing portion of precomputed kernel matrix
+            K_tst = K[lag_][tst_idx, :][:, trn_idx]
+            y_tst = y[tst_idx, id_]
 
             for C in C_s:
                 for e in e_s:
@@ -117,30 +125,33 @@ def run_regression(K, lags, vecs, y, C_s, e_s, n_splits=10, test_size=.20, id=0)
                     inner_cv = ShuffleSplit(n_splits=1, test_size=.20)
                     
                     trn_idx_cv, tst_idx_cv = next(inner_cv.split(range(K_trn.shape[0])))                
-                    K_trn_cv = K_trn[trn_idx_cv,:][:,trn_idx_cv]
-                    K_tst_cv = K_trn[tst_idx_cv,:][:,trn_idx_cv]
+                    K_trn_cv = K_trn[trn_idx_cv, :][:, trn_idx_cv]
+                    K_tst_cv = K_trn[tst_idx_cv, :][:, trn_idx_cv]
                     y_trn_cv = y_trn[trn_idx_cv]
                     y_tst_cv = y_trn[tst_idx_cv]
                     
                     svr.fit(K_trn_cv, y_trn_cv)
                     y_hat_cv = svr.predict(K_tst_cv)
-                    score = mean_squared_error(y_tst_cv, y_hat_cv) # use parameter MSE for hyperparameter selection
+
+                    # use parameter MSE for hyperparameter selection
+                    score = mean_squared_error(y_tst_cv, y_hat_cv)
                     
                     if score < best_score:
-                        best_C = C # C-param of SVM
-                        best_e = e # epsilon-param of SVM
-                        best_l = l # lag
+                        best_c = C  # C-param of SVM
+                        best_e = e  # epsilon-param of SVM
+                        best_l = lag_  # lag
                         best_score = score
         
-        svr.C = best_C
+        svr.C = best_c
         svr.epsilon = best_e
         
         # re-train on full training portion of kernel matrix
-        K_trn = K[best_l][trn_idx,:][:,trn_idx]
-        K_tst = K[best_l][tst_idx,:][:,trn_idx]
-        y_trn = y[trn_idx,id]
-        y_tst = y[tst_idx,id]
+        K_trn = K[best_l][trn_idx, :][:, trn_idx]
+        K_tst = K[best_l][tst_idx, :][:, trn_idx]
+        y_trn = y[trn_idx, id_]
+        y_tst = y[tst_idx, id_]
         svr.fit(K_trn, y_trn)
+
         # predict on testing portion
         y_hat = svr.predict(K_tst)
         
@@ -163,18 +174,24 @@ def main():
     
     prms = torch.load(args.prms_inp_file)
     vecs = torch.load(args.vecs_inp_file)
-    prms_ids = list(range(prms.shape[1])) # determine nr. of parameters
+
+    # determine nr. of parameters
+    prms_ids = list(range(prms.shape[1]))
     
-    vecs = vecs.permute(0,2,1)
-    N,D,T = vecs.shape
-    print(f'{N} time series of dim {D} with {T} timepoints and {len(prms_ids)} aux. variables!')
+    vecs = vecs.permute(0, 2, 1)
+    num_time_series, dimension_time_series, num_time_steps = vecs.shape
+    print(f'{num_time_series} time series of dim {dimension_time_series} '
+          f'with {num_time_steps} timepoints and '
+          f'{len(prms_ids)} aux. variables!')
     
-    data = vecs.permute(0,2,1).view(-1,T)
+    data = vecs.permute(0, 2, 1).view(-1, num_time_steps)
     scaler = MinMaxScaler()
     scaler.fit(data)
-    vecs = torch.tensor(scaler.transform(data)).view(N,T,D)
+    vecs = torch.tensor(scaler.transform(data)).view(num_time_series,
+                                                     num_time_steps,
+                                                     dimension_time_series)
     
-    lags = [0,1,2] # 3 lags used ion [Giusti23a]
+    lags = [0, 1, 2]  # 3 lags used ion [Giusti23a]
     lagged_vecs = lag_transform(vecs)
 
     K_ss = defaultdict(list)
@@ -190,8 +207,8 @@ def main():
             print('Computed {} in {} sec'.format(kern_out_file, time.time()-t0))
             torch.save(K_ss[l], kern_out_file)
 
-    C_s = np.logspace(-3, 1, 5) # from [Giusti23a] paper
-    e_s = np.logspace(-4, 1, 5) # from [Giusti23a] paper
+    C_s = np.logspace(-3, 1, 5)  # from [Giusti23a] paper
+    e_s = np.logspace(-4, 1, 5)  # from [Giusti23a] paper
 
     stats = defaultdict(list)
     cv_runs = 10
@@ -205,20 +222,19 @@ def main():
             np.std(r2vals_ss),
             np.mean(smapes_ss),
             np.std(smapes_ss),
-        ))            
-    
-        [stats['r2s_param'+str(aux_d)].append(tmp) for tmp in r2vals_ss]   # r2 per CV run and parameter
-        [stats['rmse_param'+str(aux_d)].append(tmp) for tmp in rmses_ss]   # RMSE per CV run and parameter
-        [stats['smape_param'+str(aux_d)].append(tmp) for tmp in smapes_ss] # SMAPE per CV run and parameter
+        ))
+
+        # r2 per CV run and parameter
+        [stats['r2s_param'+str(aux_d)].append(tmp) for tmp in r2vals_ss]
+
+        # RMSE per CV run and parameter
+        [stats['rmse_param'+str(aux_d)].append(tmp) for tmp in rmses_ss]
+
+        # SMAPE per CV run and parameter
+        [stats['smape_param'+str(aux_d)].append(tmp) for tmp in smapes_ss]
     
     torch.save(stats, args.stat_out_file)
     
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-

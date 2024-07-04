@@ -169,7 +169,7 @@ def main():
         ts = datetime.datetime.fromtimestamp(time.time()).strftime(
             '%Y-%m-%d_%H:%M:%S')
         log_handlers += [logging.FileHandler(
-            f"{os.getcwd()}/out/"
+            f"{os.getcwd()}/logs/"
             f"{ts}_crocker_stack_svc_hyp-tun.log"
         )]
 

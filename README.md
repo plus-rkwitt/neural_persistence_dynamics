@@ -297,6 +297,40 @@ The path signature kernel (PSK) approach is implemented in `psk.py`. For the `do
 
 
 ### Crocker Stacks
+The Crocker stacks baseline comparison is implemented in crocker_stacks.py. 
+To execute this script, you must first prepare the data using compute_cs.py. 
+Additionally, you need to install the teaspoon library with the appropriate 
+version for computing the Crocker stacks.  
+
+```bash
+pip install git+https://github.com/martinuray/teaspoon.git
+```
+*Note:* Once the addition are merged to `teaspoon`, the instructions will be 
+updated.
+
+Further dependencies:
+```bash
+pip install scikit-optimize
+```
+
+To prepare the Crocker stacks for the `dorsogna-1k` dataset, execute the 
+compute_cs.py script with the path to the persistence diagrams: 
+
+```bash
+python compute_cs.py --dgms_file data/Giusti23a/1k/dgms_1k_vr_h0h1.pt
+```
+
+After the calculation, the Crocker stacks will be saved next to the 
+specified file.
+
+To execute the experiment for the Crocker stack, use the crocker_stacks.py 
+script. Here is an example command for the `dorsogna-1k` dataset: 
+
+```bash
+python crocker_stacks.py --prms_file=data/Vicsek/43_rips/vicsek_prms_10k.pt --vecs_file=data/Vicsek/43_rips/crocker_vecs.pt
+```
+The output will directly display the final results.
+
 
 ### Baseline model
 

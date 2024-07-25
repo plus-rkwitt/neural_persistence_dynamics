@@ -303,14 +303,7 @@ Additionally, you need to install the teaspoon library with the appropriate
 version for computing the Crocker stacks.  
 
 ```bash
-pip install git+https://github.com/martinuray/teaspoon.git
-```
-*Note:* Once the addition are merged to `teaspoon`, the instructions will be 
-updated.
-
-Further dependencies:
-```bash
-pip install scikit-optimize
+pip install teaspoon scikit-optimize
 ```
 
 To prepare the Crocker stacks for the `dorsogna-1k` dataset, execute the 

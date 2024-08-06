@@ -12,6 +12,9 @@ from rich.markdown import Markdown
 from rich_argparse import RichHelpFormatter
 
 import numpy as np
+
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from halo import Halo

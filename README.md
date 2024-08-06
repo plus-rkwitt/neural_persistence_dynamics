@@ -107,11 +107,8 @@ Diagrams are saved to `data/Giusti23a/1k/dgms_1k_vr_h0h1.pt`.
 > [!TIP]
 > In the case, that during execution an error similar to 
 >``
->OSError: /home/User/envs/pytorch23/lib/python3.10/site-packages/torch/lib/..
-> /../../.././libstdc++.so.6: 
->version `GLIBCXX_3.4.32' not found (required by /home/USER/.
-> miniconda3/envs/pytorch23/lib/python3.
-> 10/site-packages/ripserplusplus/libphmap.so)``
+> OSError: /home/User/envs/pytorch23/lib/python3.10/site-packages/torch/lib/../../../.././libstdc++.so.6: 
+> version `GLIBCXX_3.4.32' not found (required by /home/USER/.miniconda3/envs/pytorch23/lib/python3.10/site-packages/ripserplusplus/libphmap.so)``
 > occurs, please be referred to [this link](https://github.com/pytorch/pytorch/issues/115138#issuecomment-2031503676).
 
 ### Computing vectorizations

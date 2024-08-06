@@ -41,7 +41,7 @@ mkdir -p runs # stores all tensorboard related stuff
 
 ### Installing ```pytorch```
 ```bash
-conda install pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
+conda install pytorch=2.3.0 torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
 python -c 'import torch' # check
 ```
 

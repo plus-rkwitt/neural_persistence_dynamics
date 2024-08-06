@@ -1,4 +1,4 @@
-<img src="assets/npd.jpg" height="180" />
+<img src="assets/logo.jpg" height="180" />
 
 This is the offical repository for [Neural Persistence Dynamics](https://arxiv.org/abs/2405.15732).
 

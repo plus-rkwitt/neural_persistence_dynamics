@@ -6,6 +6,7 @@ import time
 import torch
 import numpy as np
 from collections import defaultdict
+from sklearn.metrics import explained_variance_score
 
 import argparse
 from rich.markdown import Markdown
@@ -95,7 +96,7 @@ def time_subsample(vecs, sample_rate=0.2):
 def run_regression(K, lags, vecs, y, C_s, e_s, n_splits=10,
                    test_size=.20, id_=0):
 
-    rmses, r2vals, smapes = [], [], []
+    rmses, r2vals, smapes, expvars  = [], [], [], []
     cv = ShuffleSplit(n_splits=n_splits, test_size=test_size)
     metric = RegressionMetric()
 
@@ -159,8 +160,9 @@ def run_regression(K, lags, vecs, y, C_s, e_s, n_splits=10,
         rmses.append(metric.root_mean_squared_error(y_tst.numpy(), y_hat))
         smapes.append(metric.symmetric_mean_absolute_percentage_error(y_tst.numpy(), y_hat))
         r2vals.append(r2_score(y_tst.numpy(), y_hat))
+        expvars.append(explained_variance_score(y_tst.numpy(), y_hat))
 
-    return rmses, r2vals, smapes
+    return rmses, r2vals, smapes, expvars
 
 
 def main():
@@ -213,8 +215,8 @@ def main():
     stats = defaultdict(list)
     cv_runs = 10
     for aux_d in prms_ids:
-        rmses_ss, r2vals_ss, smapes_ss = run_regression(K_ss, lags, vecs, prms, C_s, e_s, cv_runs, 0.2, aux_d)
-        print('[{}]: RMSE={:0.4f} +/- {:0.4f} | R2={:0.4f} +/- {:0.4f} | SMAPE={:0.4f} +/- {:0.4f} '.format(
+        rmses_ss, r2vals_ss, smapes_ss, expvars_ss = run_regression(K_ss, lags, vecs, prms, C_s, e_s, cv_runs, 0.2, aux_d)
+        print('[{}]: RMSE={:0.4f} +/- {:0.4f} | R2={:0.4f} +/- {:0.4f} | SMAPE={:0.4f} +/- {:0.4f} | ExpVar={:0.4f} +/- {:0.4f} '.format(
             aux_d,
             np.mean(rmses_ss),
             np.std(rmses_ss),
@@ -222,16 +224,15 @@ def main():
             np.std(r2vals_ss),
             np.mean(smapes_ss),
             np.std(smapes_ss),
-        ))
-
-        # r2 per CV run and parameter
-        [stats['r2s_param'+str(aux_d)].append(tmp) for tmp in r2vals_ss]
-
-        # RMSE per CV run and parameter
-        [stats['rmse_param'+str(aux_d)].append(tmp) for tmp in rmses_ss]
-
-        # SMAPE per CV run and parameter
-        [stats['smape_param'+str(aux_d)].append(tmp) for tmp in smapes_ss]
+            np.mean(expvars_ss),
+            np.std(expvars_ss)
+        ))            
+    
+        [stats['r2s_param'+str(aux_d)].append(tmp) for tmp in r2vals_ss]   # r2 per CV run and parameter
+        [stats['rmse_param'+str(aux_d)].append(tmp) for tmp in rmses_ss]   # RMSE per CV run and parameter
+        [stats['smape_param'+str(aux_d)].append(tmp) for tmp in smapes_ss] # SMAPE per CV run and parameter
+        [stats['expvar_param'+str(aux_d)].append(tmp) for tmp in expvars_ss] # SMAPE per CV run and parameter
+        
     
     torch.save(stats, args.stat_out_file)
     

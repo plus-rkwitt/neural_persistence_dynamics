@@ -1,9 +1,5 @@
 """
 Script to prepare the crocker stacks from the persistence diagrams.
-
-TODO:
-- [ ] check the final implementation, once the crocker stack pull request is
-      merged into teaspoon (https://github.com/TeaspoonTDA/teaspoon/pull/112)
 """
 import argparse
 import logging

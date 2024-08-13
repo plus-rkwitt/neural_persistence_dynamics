@@ -73,7 +73,7 @@ def main():
     spinner = Halo(spinner='dots')
 
     spinner.start(f'Loading {args.dgms_inp_file}')
-    raw_dgms = torch.load(args.dgms_inp_file)
+    raw_dgms = torch.load(args.dgms_inp_file, weights_only=False)
     spinner.succeed()
 
     misc = {}

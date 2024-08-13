@@ -65,6 +65,20 @@ python -c 'import torchdiffeq' # check
 
 please see the installation instructions [here](https://github.com/simonzhang00/ripser-plusplus).
 
+Typically, one would use
+```
+pip3 install git+https://github.com/simonzhang00/ripser-plusplus.git
+```
+Depending on your system's GCC and CUDA version, you might need to downgrade to, e.g., GCC-12. On 
+an Ubuntu system, this can be done via
+```bash
+sudo apt-get install g++-12
+sudo apt-get install gcc-12
+sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
+sudo update-alternatives --config g++ # then select the version you want
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100
+sudo update-alternatives --config gcc # then select the version you want
+```
 
 ### Installing `signatory`
 ```bash

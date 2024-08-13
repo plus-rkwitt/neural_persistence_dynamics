@@ -62,10 +62,9 @@ python -c 'import torchdiffeq' # check
 ```
 
 ### Installing `ripser-plusplus`
-```bash
-conda install cmake
-pip3 install git+https://github.com/simonzhang00/ripser-plusplus.git
-```
+
+please see the installation instructions [here](https://github.com/simonzhang00/ripser-plusplus).
+
 
 ### Installing `signatory`
 ```bash
@@ -79,7 +78,7 @@ python -c 'import signatory' # check
 
 ### Installing other required packages
 ```bash
-pip install tensorboard permetrics halo einops h5py rich_argparse gdown matplotlib torch_geometric
+pip install tensorboard permetrics halo einops h5py rich_argparse gdown matplotlib torch_geometric torch_cluster torch_scatter torch_sparse 
 ```
 
 ## Replicating experiments
@@ -104,12 +103,13 @@ This will compute all Vietoris-Rips persistence diagrams for $H_0$ and $H_1$
 (by default; in case you also want $H_2$ add `--max-dim 2` on the command line).
 Diagrams are saved to `data/Giusti23a/1k/dgms_1k_vr_h0h1.pt`.
 
-> [!TIP]
-> In the case, that during execution an error similar to 
->``
-> OSError: /home/User/envs/pytorch23/lib/python3.10/site-packages/torch/lib/../../../.././libstdc++.so.6: 
-> version `GLIBCXX_3.4.32' not found (required by /home/USER/.miniconda3/envs/pytorch23/lib/python3.10/site-packages/ripserplusplus/libphmap.so)``
-> occurs, please be referred to [this link](https://github.com/pytorch/pytorch/issues/115138#issuecomment-2031503676).
+*In the case, that during execution an error similar to* 
+
+``
+OSError: /home/User/envs/pytorch23/lib/python3.10/site-packages/torch/lib/../../../.././libstdc++.so.6: 
+version `GLIBCXX_3.4.32' not found (required by /home/USER/.miniconda3/envs/pytorch23/lib/python3.10/site-packages/ripserplusplus/libphmap.so)``
+
+*occurs, please be referred to [this link](https://github.com/pytorch/pytorch/issues/115138#issuecomment-2031503676).*
 
 ### Computing vectorizations
 
@@ -304,7 +304,7 @@ The path signature kernel (PSK) approach is implemented in `psk.py`. For the `do
 
 
 ### Crocker Stacks
-The Crocker stacks baseline comparison is implemented in crocker_stacks.py. 
+The Crocker stacks baseline comparison is implemented in `crocker_stacks.py`. 
 To execute this script, you must first prepare the data using compute_cs.py. 
 Additionally, you need to install the teaspoon library with the appropriate 
 version for computing the Crocker stacks.  
@@ -314,7 +314,7 @@ pip install teaspoon scikit-optimize
 ```
 
 To prepare the Crocker stacks for the `dorsogna-1k` dataset, execute the 
-compute_cs.py script with the path to the persistence diagrams: 
+`compute_cs.py` script with the path to the persistence diagrams: 
 
 ```bash
 python compute_cs.py --dgms_file data/Giusti23a/1k/dgms_1k_vr_h0h1.pt
@@ -327,12 +327,11 @@ To execute the experiment for the Crocker stack, use the crocker_stacks.py
 script. Here is an example command for the `dorsogna-1k` dataset: 
 
 ```bash
-python crocker_stacks.py --prms_file=data/Vicsek/43_rips/vicsek_prms_10k.pt --vecs_file=data/Vicsek/43_rips/crocker_vecs.pt
+python crocker_stacks.py \
+    --prms_file=data/Vicsek/43_rips/vicsek_prms_10k.pt \
+    --vecs_file=data/Vicsek/43_rips/crocker_vecs.pt
 ```
 The output will directly display the final results.
-
-
-### Baseline model
 
 ## Notebooks
 

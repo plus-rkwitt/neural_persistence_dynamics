@@ -17,8 +17,8 @@ class PHDataset(Dataset):
         assert os.path.exists(vec_file)
         assert os.path.exists(aux_file)
 
-        obs = torch.load(vec_file).float()   
-        aux = torch.load(aux_file).float()
+        obs = torch.load(vec_file, weights_only=False).float()   
+        aux = torch.load(aux_file, weights_only=False).float()
         N,T,D = obs.shape
 
         self.T = T
@@ -26,7 +26,7 @@ class PHDataset(Dataset):
         self.D = D
 
         self.aux_obs = aux
-        self.evd_obs = torch.load(vec_file).float()   
+        self.evd_obs = torch.load(vec_file, weights_only=False).float()   
         self.evd_msk = torch.ones_like(self.evd_obs).long()
         self.evd_tid = torch.arange(T).view(1,self.T).repeat(self.N,1)
         
@@ -111,7 +111,7 @@ class PointCloudDataset(Dataset):
         assert os.path.exists(pts_file), 'Point file {} does not exist!'.format(pts_file)
         assert os.path.exists(aux_file), 'Auxiliary file {} does not exist'.format(aux_file)
 
-        obs = torch.load(pts_file)
+        obs = torch.load(pts_file, weights_only=False)
         M, T, N, D = 0, 0, 0, 0
         if isinstance(obs, torch.Tensor):
             obs = obs.float()
@@ -122,7 +122,7 @@ class PointCloudDataset(Dataset):
             T = len(obs[0])
             D = obs[0][0].shape[1]
             
-        aux = torch.load(aux_file).float()
+        aux = torch.load(aux_file, weights_only=False).float()
 
         self.M = M # UNUSED
         self.T = T # sequence length

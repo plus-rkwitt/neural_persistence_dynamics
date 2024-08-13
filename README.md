@@ -2,6 +2,8 @@
 
 This is the offical repository for [Neural Persistence Dynamics](https://arxiv.org/abs/2405.15732).
 
+**We are still updating the respository actively!**
+
 If you use the code please cite as:
 
 ```bibtex

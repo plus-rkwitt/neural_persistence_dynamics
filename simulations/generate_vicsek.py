@@ -15,63 +15,64 @@ from simulation_utils import ProgressBar
 
 
 def setup_argsparse():
-    description = """**Vicsek simulation**"""    
+    description = """**Vicsek simulation**"""
     parser = argparse.ArgumentParser(
-        description=Markdown(description, style="argparse.text"), 
-        formatter_class=RichHelpFormatter)
-    parser.add_argument(
-        "--simulations", 
-        metavar="INT",
-        type=int, 
-        default=1, 
-        help="Number of simulations to run (default: %(default)s)"
+        description=Markdown(description, style="argparse.text"),
+        formatter_class=RichHelpFormatter,
     )
     parser.add_argument(
-        "--points", 
+        "--simulations",
         metavar="INT",
-        type=int, 
+        type=int,
+        default=1,
+        help="Number of simulations to run (default: %(default)s)",
+    )
+    parser.add_argument(
+        "--points",
+        metavar="INT",
+        type=int,
         default=50,
-        help="Number of points (default: %(default)s)"
+        help="Number of points (default: %(default)s)",
     )
     parser.add_argument(
-        "--steps", 
+        "--steps",
         metavar="INT",
-        type=int, 
+        type=int,
         default=1000,
-        help='Number of simulation steps at dt=0.01 (default: %(default)s)'
+        help="Number of simulation steps at dt=0.01 (default: %(default)s)",
     )
     parser.add_argument(
-        "--freq", 
+        "--freq",
         metavar="INT",
-        type=int, 
+        type=int,
         default=10,
-        help="Frequency of keeping observations (default: %(default)s)"
+        help="Frequency of keeping observations (default: %(default)s)",
     )
     parser.add_argument(
-        "--dim", 
+        "--dim",
         metavar="INT",
-        type=int, 
+        type=int,
         default=3,
-        help="Dimension of the simulation space (default: %(default)s)"
+        help="Dimension of the simulation space (default: %(default)s)",
     )
     parser.add_argument(
-        "--device", 
+        "--device",
         metavar="STR",
-        type=str, 
+        type=str,
         default="cuda:0",
-        help="Device to run the simulation on (default: %(default)s)"
+        help="Device to run the simulation on (default: %(default)s)",
     )
     parser.add_argument(
-        "--root", 
+        "--root",
         metavar="FOLDER",
-        type=str, 
+        type=str,
         default="../data/volume_exclusion/",
-        help="Root folder to save the data (default: %(default)s)"
+        help="Root folder to save the data (default: %(default)s)",
     )
     parser.add_argument(
-        "--id", 
+        "--id",
         metavar="STR",
-        type=str, 
+        type=str,
         default=-1,
         help="ID of the simulation (default: random)",
     )
@@ -88,8 +89,8 @@ class VicsekSimulator:
         steps: int,
         freq: int,
         dim: int = 3,
-        device: float = 'cuda:0',
-        box_size: float = 20.,
+        device: float = "cuda:0",
+        box_size: float = 20.0,
         dt: float = 0.01,
     ) -> None:
         self.num_points = num_points
@@ -99,40 +100,37 @@ class VicsekSimulator:
         self.device = device
         self.box_size = box_size
         self.dt = dt
-        
-        self.fixed_params = {
-            'box_size': box_size,
-            'dt': dt
-        }
+
+        self.fixed_params = {"box_size": box_size, "dt": dt}
 
     def simulate(self, rad, c, sigma, nu):
-        pos = self.box_size*torch.rand(self.num_points, self.dim, device=self.device)
+        pos = self.box_size * torch.rand(self.num_points, self.dim, device=self.device)
         vel = torch.randn(self.num_points, self.dim, device=self.device)
-        vel = vel/torch.norm(vel, dim=1).reshape((self.num_points, 1))
-    
+        vel = vel / torch.norm(vel, dim=1).reshape((self.num_points, 1))
+
         params = {
-            'pos': pos,
-            'vel': vel,
-            'interaction_radius': rad,
-            'sigma': sigma,
-            'nu': nu,
-            'v': c,
-            **self.fixed_params
+            "pos": pos,
+            "vel": vel,
+            "interaction_radius": rad,
+            "sigma": sigma,
+            "nu": nu,
+            "v": c,
+            **self.fixed_params,
         }
-        
+
         simu = Vicsek(**params)
 
         positions = []
         for step, i in zip(simu, range(self.steps)):
             if i % 10 == 0:
-                positions.append(step['position'])
+                positions.append(step["position"])
         return positions
-    
+
 
 def generate_param():
-    rad = torch.Tensor(1).uniform_(0.5, 5.).item()
-    c = torch.Tensor(1).uniform_(0.5, 5.).item()
-    sigma = torch.Tensor(1).uniform_(0., 2.0).item()
+    rad = torch.Tensor(1).uniform_(0.5, 5.0).item()
+    c = torch.Tensor(1).uniform_(0.5, 5.0).item()
+    sigma = torch.Tensor(1).uniform_(0.0, 2.0).item()
     nu = torch.Tensor(1).uniform_(0.5, 5.0).item()
     return rad, c, sigma, nu
 
@@ -140,16 +138,17 @@ def generate_param():
 def main():
     args = setup_argsparse()
     simulator = VicsekSimulator(
-        num_points=args.points, 
-        steps=args.steps, 
-        freq=args.freq, 
-        dim=args.dim, 
-        device=args.device)
+        num_points=args.points,
+        steps=args.steps,
+        freq=args.freq,
+        dim=args.dim,
+        device=args.device,
+    )
 
     directory_ = os.path.join(args.root, f"id_{args.id}")
     if not os.path.isdir(directory_):
         os.makedirs(directory_)
-    
+
     pbar = ProgressBar(args.simulations)
     positions, velocities, params = [], [], []
     n = 0
@@ -163,12 +162,12 @@ def main():
             n += 1
             pbar.update()
     print("\n", m, "/", n)
-        
-    with open(f'{directory_}setup.json', 'w') as f:
+
+    with open(f"{directory_}setup.json", "w") as f:
         json.dump(simulator.__dict__, f, ensure_ascii=True, indent=4)
-    torch.save(params, os.path.join(directory_, 'target.pt'))
-    torch.save(positions, os.path.join(directory_, 'positions.pt'))
-    torch.save(velocities, os.path.join(directory_, 'velocities.pt'))
+    torch.save(params, os.path.join(directory_, "target.pt"))
+    torch.save(positions, os.path.join(directory_, "positions.pt"))
+    torch.save(velocities, os.path.join(directory_, "velocities.pt"))
 
 
 if __name__ == "__main__":

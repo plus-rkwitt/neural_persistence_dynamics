@@ -241,7 +241,7 @@ To run your own simulations, you also need to install the `sysiphe` package via
 
 ```bash
 pip3 install sisyphe
-python -c 'import torchdiffeq' # check
+python -c 'import sisyphe' # check
 ```
 
 Simulation code for (almost) all simulations can be found under `simulations`. 

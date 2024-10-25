@@ -500,16 +500,6 @@ def main():
     assert args.num_timepts is not None, "Nr. of timepoints not set!"
     t = torch.linspace(0, 1.0, args.num_timepts).to(args.device)
 
-    optimizer = Adam([
-        {'params': modules['recog_net'].parameters(), 'weight_decay': 1e-3},
-        {'params': modules['recon_net'].parameters()},
-        {'params': modules['lnode_net'].parameters()},
-        {'params': modules['ptogd_net'].parameters()},
-        {'params': modules['processor'].parameters()},
-        {'params': modules['regressor'].parameters()}],
-        lr=args.lr, weight_decay=args.weight_decay
-    )
-
     optimizer = Adam(modules.parameters(), lr=args.lr,
                      weight_decay=args.weight_decay)
     scheduler = CosineAnnealingLR(optimizer, args.restart, eta_min=0,
